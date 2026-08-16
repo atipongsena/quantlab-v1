@@ -89,3 +89,32 @@ class PaperService:
             json.dump(result_payload, f, indent=2)
 
         return result_payload
+
+    def reconcile_daily(
+        self,
+        session_date: date,
+        strategy_config_path: str | Path = "configs/strategies/composite-top30-v1.yaml",
+        output_path: Path | None = None,
+    ) -> dict[str, object]:
+        account = self._adapter.get_account()
+        # In mock baseline, shadow matches broker
+        from quantlab.paper.reconciliation import ShadowReconciler
+
+        rep = ShadowReconciler.reconcile(
+            shadow_cash=account.cash_balance,
+            shadow_positions=account.positions,
+            broker_account=account,
+        )
+
+        result_payload = rep.as_dict()
+        result_payload["session"] = session_date.isoformat()
+
+        out_file = (
+            output_path or self._base_dir / "artifacts" / "latest" / "paper-reconciliation.json"
+        )
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result_payload, f, indent=2)
+
+        return result_payload

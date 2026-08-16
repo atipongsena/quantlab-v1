@@ -11,6 +11,7 @@ from apps.cli.commands.factor import (
     run_factor_research,
 )
 from apps.cli.commands.model import run_model_compare
+from apps.cli.commands.paper import run_paper_reconcile, run_paper_run
 from apps.cli.commands.red_team import run_red_team
 from apps.cli.commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
@@ -305,6 +306,44 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", choices=["text", "json"], default="text", help="Output format"
     )
     model_compare_cmd.set_defaults(func=run_model_compare)
+
+    # Paper trading subcommand
+    paper_parser = subparsers.add_parser(
+        "paper", help="Paper trading operational lifecycle and reconciliation commands"
+    )
+    paper_subparsers = paper_parser.add_subparsers(dest="paper_command", required=True)
+
+    paper_run_cmd = paper_subparsers.add_parser("run", help="Execute daily paper trading cycle")
+    paper_run_cmd.add_argument("--date", default="2026-01-05", help="Session date (YYYY-MM-DD)")
+    paper_run_cmd.add_argument(
+        "--strategy",
+        default="configs/strategies/composite-top30-v1.yaml",
+        help="Path to strategy config YAML",
+    )
+    paper_run_cmd.add_argument("--offline", action="store_true", help="Run in strict offline mode")
+    paper_run_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
+    paper_run_cmd.set_defaults(func=run_paper_run)
+
+    paper_reconcile_cmd = paper_subparsers.add_parser(
+        "reconcile", help="Reconcile shadow ledger with broker account"
+    )
+    paper_reconcile_cmd.add_argument(
+        "--date", default="2026-01-05", help="Session date (YYYY-MM-DD)"
+    )
+    paper_reconcile_cmd.add_argument(
+        "--strategy",
+        default="configs/strategies/composite-top30-v1.yaml",
+        help="Path to strategy config YAML",
+    )
+    paper_reconcile_cmd.add_argument(
+        "--offline", action="store_true", help="Run in strict offline mode"
+    )
+    paper_reconcile_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
+    paper_reconcile_cmd.set_defaults(func=run_paper_reconcile)
 
     return parser
 
