@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import argparse
-import json
 from datetime import date
+import json
+from pathlib import Path
 
 from quantlab.application.factor_research import FactorResearchService
 
@@ -43,6 +44,12 @@ def run_factor_research(args: argparse.Namespace) -> int:
         start_date=start_date,
         end_date=end_date,
     )
+
+    # Save evidence artifact to artifacts/latest/factor-research.json
+    latest_dir = Path.cwd() / "artifacts" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    with open(latest_dir / "factor-research.json", "w", encoding="utf-8") as f:
+        json.dump(result.as_dict(), f, indent=2)
 
     if getattr(args, "output", "text") == "json":
         print(json.dumps(result.as_dict(), indent=2))
