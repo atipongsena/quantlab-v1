@@ -1,0 +1,29 @@
+walk_forward_id: "walk-forward-v1"
+description: "Purged and Embargoed Temporal Walk-Forward Cross Validation Specification"
+
+split:
+  window_type: "expanding"
+  min_train_sessions: 252
+  train_window_sessions: 504
+  test_window_sessions: 63
+  step_sessions: 63
+  purge_sessions: 21
+  embargo_sessions: 5
+
+models:
+  composite:
+    type: "heuristic"
+    factor_weights:
+      momentum_12_1: 0.50
+      value_composite: 0.30
+      quality_roe: 0.20
+  ridge:
+    type: "linear"
+    alpha: 1.0
+    normalize: true
+  lightgbm:
+    type: "tree"
+    n_estimators: 100
+    learning_rate: 0.05
+    max_depth: 3
+    num_leaves: 8
