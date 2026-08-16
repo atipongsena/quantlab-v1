@@ -1,7 +1,7 @@
 """Tests proving that lookahead leakage canary is correctly rejected."""
 
-from quantlab.red_team.runner import RedTeamRunner
 from quantlab.validation.gates import HardGateType
+from quantlab.validation.red_team import RedTeamRunner
 from quantlab.validation.verdicts import ValidationVerdict
 
 

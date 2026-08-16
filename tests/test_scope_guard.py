@@ -325,10 +325,10 @@ def test_scope_ignores_planned_dependencies_but_rejects_runtime_dependencies(
     tmp_path: Path,
 ) -> None:
     """Treating policy prose as code would reject M0, while imports must still be denied."""
-    exit_code, result = run_scope_check(PROJECT_ROOT, "M2")
+    exit_code, result = run_scope_check(PROJECT_ROOT, "M4")
 
     assert exit_code == 0
-    assert result == {"milestone": "M2", "status": "ok", "violations": []}
+    assert result == {"milestone": "M4", "status": "ok", "violations": []}
 
     runtime_config = tmp_path / "configs" / "models" / "current.yaml"
     runtime_config.parent.mkdir(parents=True)

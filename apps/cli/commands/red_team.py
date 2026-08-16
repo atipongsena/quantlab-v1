@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from quantlab.red_team.runner import RedTeamRunner
+from quantlab.validation.red_team import RedTeamRunner
 
 
 def run_red_team(args: argparse.Namespace) -> int:

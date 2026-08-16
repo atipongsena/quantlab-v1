@@ -18,10 +18,10 @@ class RedTeamRunner:
 
     @classmethod
     def run_lookahead_case(cls) -> ValidationResult:
-        """Lookahead canary: deliberately introduces future returns into factor signal."""
+        """Lookahead canary: deliberately introduces forward returns into factor signal."""
         candidate = CandidateFreezer.freeze(
             strategy_id="canary-lookahead-v1",
-            strategy_config={"factor_id": "future_return_canary", "leakage_days": 1},
+            strategy_config={"factor_id": "forward_return_canary", "leakage_days": 1},
             code_fingerprint="canary:lookahead",
         )
         # Synthetic high return series caused by leakage

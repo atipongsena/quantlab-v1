@@ -70,7 +70,7 @@ class HardGateEvaluator:
         decisions: list[GateDecision] = [cls.evaluate_authority(candidate)]
 
         if lookahead_detected:
-            decisions.append(cls.evaluate_leakage(True, "future information in features/signals"))
+            decisions.append(cls.evaluate_leakage(True, "forward information in features/signals"))
         else:
             decisions.append(cls.evaluate_leakage(False))
 

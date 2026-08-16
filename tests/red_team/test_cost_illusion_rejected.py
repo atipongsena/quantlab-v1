@@ -1,6 +1,6 @@
 """Tests proving that frictional cost illusion is caught and downgraded."""
 
-from quantlab.red_team.runner import RedTeamRunner
+from quantlab.validation.red_team import RedTeamRunner
 from quantlab.validation.verdicts import ValidationVerdict
 
 

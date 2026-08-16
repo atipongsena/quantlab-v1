@@ -229,6 +229,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--offline", action="store_true", help="Run in strict offline mode"
     )
     backtest_run_cmd.add_argument("--start", help="Start date YYYY-MM-DD")
+    backtest_run_cmd.add_argument("--end", help="End date YYYY-MM-DD")
+    backtest_run_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
     backtest_run_cmd.set_defaults(func=run_backtest)
 
     # Validation subcommand

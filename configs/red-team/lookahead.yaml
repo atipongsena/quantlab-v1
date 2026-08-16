@@ -1,10 +1,10 @@
 case_id: "lookahead"
-name: "Future Information Leakage Canary"
+name: "Forward Information Leakage Canary"
 description: "Deliberately leaks next-session return into current factor snapshot"
 
 strategy:
   strategy_id: "canary-lookahead-v1"
-  factor_id: "future_return_canary"
+  factor_id: "forward_return_canary"
   leakage_days: 1
 
 expected:
