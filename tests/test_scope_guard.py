@@ -60,6 +60,78 @@ def test_socket_guard_blocks_external_datagram_network() -> None:
     assert error.value.errno == errno.ENETUNREACH
 
 
+@pytest.mark.parametrize(
+    ("resolver_name", "arguments"),
+    [
+        ("gethostbyname", ("198.51.100.1",)),
+        ("gethostbyname_ex", ("198.51.100.1",)),
+        ("gethostbyaddr", ("198.51.100.1",)),
+        ("getnameinfo", (("198.51.100.1", 443), socket.NI_NUMERICHOST)),
+        ("getfqdn", ("198.51.100.1",)),
+    ],
+)
+def test_socket_guard_blocks_nonloopback_resolution_before_lookup(
+    resolver_name: str, arguments: tuple[object, ...]
+) -> None:
+    """Removing resolver checks would permit external name resolution in offline mode."""
+    with offline_socket_guard():
+        with pytest.raises(OSError) as error:
+            getattr(socket, resolver_name)(*arguments)
+
+    assert error.value.errno == errno.ENETUNREACH
+
+
+def test_socket_guard_permits_loopback_resolution() -> None:
+    """Blocking local resolver calls would break loopback integration services."""
+    with offline_socket_guard():
+        assert socket.gethostbyname("127.0.0.1") == "127.0.0.1"
+        assert "127.0.0.1" in socket.gethostbyname_ex("127.0.0.1")[2]
+        assert socket.gethostbyaddr("127.0.0.1")[2] == ["127.0.0.1"]
+        assert socket.getnameinfo(
+            ("127.0.0.1", 5432), socket.NI_NUMERICHOST | socket.NI_NUMERICSERV
+        ) == ("127.0.0.1", "5432")
+        assert socket.getfqdn("127.0.0.1")
+
+
+def test_socket_guard_restores_nested_installations() -> None:
+    """Dropping an inner guard must leave the outer guard active and restore it last."""
+    original_calls = (
+        socket.socket.connect,
+        socket.socket.connect_ex,
+        socket.socket.sendto,
+        socket.getaddrinfo,
+        socket.gethostbyname,
+        socket.gethostbyname_ex,
+        socket.gethostbyaddr,
+        socket.getnameinfo,
+        socket.getfqdn,
+    )
+    outer_guard = offline_socket_guard()
+    inner_guard = offline_socket_guard()
+    outer_guard.install()
+    try:
+        inner_guard.install()
+        inner_guard.uninstall()
+
+        with pytest.raises(OSError) as error:
+            socket.gethostbyname("198.51.100.1")
+    finally:
+        outer_guard.uninstall()
+
+    assert error.value.errno == errno.ENETUNREACH
+    assert (
+        socket.socket.connect,
+        socket.socket.connect_ex,
+        socket.socket.sendto,
+        socket.getaddrinfo,
+        socket.gethostbyname,
+        socket.gethostbyname_ex,
+        socket.gethostbyaddr,
+        socket.getnameinfo,
+        socket.getfqdn,
+    ) == original_calls
+
+
 def run_scope_check(root: Path, milestone: str) -> tuple[int, dict[str, object]]:
     """Run the real guard against an isolated filesystem tree."""
     completed = subprocess.run(
@@ -217,17 +289,30 @@ def test_scope_ignores_planned_dependencies_but_rejects_runtime_dependencies(
     assert exit_code == 0
     assert result == {"milestone": "M0", "status": "ok", "violations": []}
 
-    policy_file = tmp_path / "configs" / "milestones.yaml"
-    policy_file.parent.mkdir()
-    policy_file.write_text(
-        "# Planned milestones may use lightgbm and mcp.\n"
-        'command = "lightgbm compare --mcp local"\n',
-        encoding="utf-8",
-    )
+    runtime_config = tmp_path / "configs" / "models" / "current.yaml"
+    runtime_config.parent.mkdir(parents=True)
+    runtime_config.write_text('model = "lightgbm"\ntransport = "mcp"\n', encoding="utf-8")
     exit_code, result = run_scope_check(tmp_path, "M0")
 
-    assert exit_code == 0
-    assert result == {"milestone": "M0", "status": "ok", "violations": []}
+    assert exit_code == 2
+    assert result == {
+        "milestone": "M0",
+        "status": "rejected",
+        "violations": [
+            {
+                "available_in": "M5",
+                "dependency": "lightgbm",
+                "kind": "premature_dependency",
+                "path": "configs/models/current.yaml",
+            },
+            {
+                "available_in": "M7",
+                "dependency": "mcp",
+                "kind": "premature_dependency",
+                "path": "configs/models/current.yaml",
+            },
+        ],
+    }
 
     source_file = tmp_path / "quantlab" / "runner.py"
     source_file.parent.mkdir()
@@ -243,8 +328,20 @@ def test_scope_ignores_planned_dependencies_but_rejects_runtime_dependencies(
                 "available_in": "M5",
                 "dependency": "lightgbm",
                 "kind": "premature_dependency",
+                "path": "configs/models/current.yaml",
+            },
+            {
+                "available_in": "M7",
+                "dependency": "mcp",
+                "kind": "premature_dependency",
+                "path": "configs/models/current.yaml",
+            },
+            {
+                "available_in": "M5",
+                "dependency": "lightgbm",
+                "kind": "premature_dependency",
                 "path": "quantlab/runner.py",
-            }
+            },
         ],
     }
 

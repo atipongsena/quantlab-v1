@@ -52,6 +52,11 @@ class OfflineSocketGuard:
     _connect_ex: Callable[..., Any] | None = None
     _sendto: Callable[..., Any] | None = None
     _getaddrinfo: Callable[..., Any] | None = None
+    _gethostbyname: Callable[..., Any] | None = None
+    _gethostbyname_ex: Callable[..., Any] | None = None
+    _gethostbyaddr: Callable[..., Any] | None = None
+    _getnameinfo: Callable[..., Any] | None = None
+    _getfqdn: Callable[..., Any] | None = None
 
     def install(self) -> None:
         """Install the guard, allowing nested callers to share one patch."""
@@ -60,10 +65,20 @@ class OfflineSocketGuard:
             type(self)._connect_ex = socket.socket.connect_ex
             type(self)._sendto = socket.socket.sendto
             type(self)._getaddrinfo = socket.getaddrinfo
+            type(self)._gethostbyname = socket.gethostbyname
+            type(self)._gethostbyname_ex = socket.gethostbyname_ex
+            type(self)._gethostbyaddr = socket.gethostbyaddr
+            type(self)._getnameinfo = socket.getnameinfo
+            type(self)._getfqdn = socket.getfqdn
             socket.socket.connect = _guarded_connect
             socket.socket.connect_ex = _guarded_connect_ex
             socket.socket.sendto = _guarded_sendto
             socket.getaddrinfo = _guarded_getaddrinfo
+            socket.gethostbyname = _guarded_gethostbyname
+            socket.gethostbyname_ex = _guarded_gethostbyname_ex
+            socket.gethostbyaddr = _guarded_gethostbyaddr
+            socket.getnameinfo = _guarded_getnameinfo
+            socket.getfqdn = _guarded_getfqdn
         type(self)._installations += 1
 
     def uninstall(self) -> None:
@@ -76,14 +91,29 @@ class OfflineSocketGuard:
             assert type(self)._connect_ex is not None
             assert type(self)._sendto is not None
             assert type(self)._getaddrinfo is not None
+            assert type(self)._gethostbyname is not None
+            assert type(self)._gethostbyname_ex is not None
+            assert type(self)._gethostbyaddr is not None
+            assert type(self)._getnameinfo is not None
+            assert type(self)._getfqdn is not None
             socket.socket.connect = type(self)._connect
             socket.socket.connect_ex = type(self)._connect_ex
             socket.socket.sendto = type(self)._sendto
             socket.getaddrinfo = type(self)._getaddrinfo
+            socket.gethostbyname = type(self)._gethostbyname
+            socket.gethostbyname_ex = type(self)._gethostbyname_ex
+            socket.gethostbyaddr = type(self)._gethostbyaddr
+            socket.getnameinfo = type(self)._getnameinfo
+            socket.getfqdn = type(self)._getfqdn
             type(self)._connect = None
             type(self)._connect_ex = None
             type(self)._sendto = None
             type(self)._getaddrinfo = None
+            type(self)._gethostbyname = None
+            type(self)._gethostbyname_ex = None
+            type(self)._gethostbyaddr = None
+            type(self)._getnameinfo = None
+            type(self)._getfqdn = None
 
     def __enter__(self) -> OfflineSocketGuard:
         self.install()
@@ -120,6 +150,41 @@ def _guarded_getaddrinfo(host: object, *arguments: object, **keyword_arguments: 
         _raise_network_denied()
     assert OfflineSocketGuard._getaddrinfo is not None
     return OfflineSocketGuard._getaddrinfo(host, *arguments, **keyword_arguments)
+
+
+def _guarded_gethostbyname(host: object) -> Any:
+    if not _is_loopback_host(host):
+        _raise_network_denied()
+    assert OfflineSocketGuard._gethostbyname is not None
+    return OfflineSocketGuard._gethostbyname(host)
+
+
+def _guarded_gethostbyname_ex(host: object) -> Any:
+    if not _is_loopback_host(host):
+        _raise_network_denied()
+    assert OfflineSocketGuard._gethostbyname_ex is not None
+    return OfflineSocketGuard._gethostbyname_ex(host)
+
+
+def _guarded_gethostbyaddr(host: object) -> Any:
+    if not _is_loopback_host(host):
+        _raise_network_denied()
+    assert OfflineSocketGuard._gethostbyaddr is not None
+    return OfflineSocketGuard._gethostbyaddr(host)
+
+
+def _guarded_getnameinfo(address: object, *arguments: object) -> Any:
+    if not isinstance(address, tuple) or not address or not _is_loopback_host(address[0]):
+        _raise_network_denied()
+    assert OfflineSocketGuard._getnameinfo is not None
+    return OfflineSocketGuard._getnameinfo(address, *arguments)
+
+
+def _guarded_getfqdn(host: object = "") -> Any:
+    if host not in ("", "0.0.0.0", "::") and not _is_loopback_host(host):
+        _raise_network_denied()
+    assert OfflineSocketGuard._getfqdn is not None
+    return OfflineSocketGuard._getfqdn(host)
 
 
 def offline_socket_guard() -> OfflineSocketGuard:

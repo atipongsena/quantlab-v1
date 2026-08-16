@@ -77,6 +77,7 @@ PACKAGE_ROOTS = ("apps", "quantlab")
 CONTENT_ROOTS = (*PACKAGE_ROOTS, "configs")
 CONTENT_SUFFIXES = {".cfg", ".ini", ".json", ".lock", ".py", ".toml", ".txt", ".yaml", ".yml"}
 DEPENDENCY_ARTIFACTS = ("pyproject.toml", "requirements.lock")
+CANONICAL_MILESTONE_POLICY = Path("configs/milestones.yaml")
 
 
 def emit(payload: dict[str, object]) -> None:
@@ -144,6 +145,23 @@ def read_scope_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace").lower()
 
 
+def dependency_scope_text(root: Path, path: Path) -> str:
+    """Return dependency-relevant text without treating planned policy commands as code."""
+    if path != root / CANONICAL_MILESTONE_POLICY:
+        return read_scope_text(path)
+    try:
+        policy = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return read_scope_text(path)
+    milestones = policy.get("milestones") if isinstance(policy, dict) else None
+    if not isinstance(milestones, dict):
+        return read_scope_text(path)
+    for configuration in milestones.values():
+        if isinstance(configuration, dict):
+            configuration.pop("commands", None)
+    return json.dumps(policy, sort_keys=True).lower()
+
+
 def feature_violations(root: Path) -> list[dict[str, str]]:
     """Find forbidden V1 capabilities in scoped names and contents."""
     files = scoped_files(root)
@@ -168,10 +186,8 @@ def dependency_violations(root: Path, milestone: str) -> list[dict[str, str]]:
     current_index = MILESTONES.index(milestone)
     violations: list[dict[str, str]] = []
     for source_path in scoped_files(root):
-        if source_path.is_relative_to(root / "configs"):
-            continue
         relative_path = source_path.relative_to(root).as_posix()
-        text = read_scope_text(source_path)
+        text = dependency_scope_text(root, source_path)
         for dependency, available_in in PREMATURE_DEPENDENCIES:
             expression = re.compile(rf"\b{re.escape(dependency)}\b")
             if expression.search(text) and MILESTONES.index(available_in) > current_index:
