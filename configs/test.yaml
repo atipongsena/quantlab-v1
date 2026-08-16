@@ -1,0 +1,4 @@
+environment: test
+data_dir: data/fixtures
+artifact_dir: artifacts/test
+log_level: DEBUG

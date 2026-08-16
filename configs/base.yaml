@@ -1,0 +1,7 @@
+environment: development
+timezone: UTC
+data_dir: data
+artifact_dir: artifacts
+log_level: INFO
+secrets:
+  provider_api_key: local-placeholder
