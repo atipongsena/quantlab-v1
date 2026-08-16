@@ -54,7 +54,7 @@ class ValidationService:
         )
 
         # 4. Save validation artifact
-        out_file = output_path or self._base_dir / "artifacts" / "latest" / "validation.json"
+        out_file = output_path or self._base_dir / "artifacts" / "latest" / "validation-report.json"
         out_file.parent.mkdir(parents=True, exist_ok=True)
 
         with open(out_file, "w", encoding="utf-8") as f:
