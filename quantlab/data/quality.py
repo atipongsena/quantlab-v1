@@ -66,7 +66,7 @@ class DataQualityAuditor:
         # 1. Price boundaries check
         invalid_prices = 0
         invalid_ohlc = 0
-        future_timestamps = 0
+        lookahead_observations = 0
         weekend_bars = 0
 
         by_inst: dict[object, list[MarketBar]] = {}
@@ -79,7 +79,7 @@ class DataQualityAuditor:
             ):
                 invalid_ohlc += 1
             if as_of is not None and bar.observed_at > as_of:
-                future_timestamps += 1
+                lookahead_observations += 1
             if bar.session.weekday() >= 5:
                 weekend_bars += 1
 
@@ -119,12 +119,12 @@ class DataQualityAuditor:
                 )
             )
 
-        if future_timestamps == 0:
+        if lookahead_observations == 0:
             checks.append(
                 DataQualityCheck(
                     name="temporal_integrity",
                     status="PASS",
-                    message="No future observations found ahead of as_of",
+                    message="No observations found ahead of as_of",
                 )
             )
         else:
@@ -132,8 +132,8 @@ class DataQualityAuditor:
                 DataQualityCheck(
                     name="temporal_integrity",
                     status="FAIL",
-                    message=f"Found {future_timestamps} bars observed in the future",
-                    details={"future_count": future_timestamps},
+                    message=f"Found {lookahead_observations} observations ahead of as_of",
+                    details={"lookahead_count": lookahead_observations},
                 )
             )
 

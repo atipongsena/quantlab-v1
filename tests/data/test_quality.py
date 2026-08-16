@@ -49,11 +49,13 @@ def test_data_quality_auditor_on_clean_and_corrupt_data() -> None:
     assert clean_report.overall_status == "PASS"
     assert clean_report.confidence_score == 1.0
 
-    # 2. Future observation failure
-    future_report = auditor.audit_market_bars(
-        dataset_id="future_bars",
+    # 2. Lookahead observation failure
+    lookahead_report = auditor.audit_market_bars(
+        dataset_id="lookahead_bars",
         bars=clean_bars,
         as_of=datetime(2020, 1, 1, 0, 0, tzinfo=UTC),  # as_of before observations
     )
-    assert future_report.overall_status == "FAIL"
-    assert any(c.name == "temporal_integrity" and c.status == "FAIL" for c in future_report.checks)
+    assert lookahead_report.overall_status == "FAIL"
+    assert any(
+        c.name == "temporal_integrity" and c.status == "FAIL" for c in lookahead_report.checks
+    )
