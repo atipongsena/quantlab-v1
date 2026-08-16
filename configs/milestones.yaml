@@ -47,7 +47,12 @@
         "python scripts/check_scope.py M3"
       ],
       "verification_command": "python scripts/verify_milestone.py M3 --require-prior",
-      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py", "artifacts/golden/synthetic_v1/backtest"],
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py", "artifacts/golden/synthetic_v1/backtest", "artifacts/golden/synthetic_v1/backtest.approval.json"],
+      "golden_approval": {
+        "path": "artifacts/golden/synthetic_v1/backtest.approval.json",
+        "directory": "artifacts/golden/synthetic_v1/backtest",
+        "commit_subject": "chore(golden): approve M3 synthetic_v1 backtest"
+      },
       "evidence_paths": ["artifacts/latest/backtest/manifest.json"],
       "fixture_ids": ["DATASET-v001", "synthetic_v1"]
     },

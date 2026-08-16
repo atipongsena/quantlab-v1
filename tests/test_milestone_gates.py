@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
+import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +23,7 @@ class GateReportLike(Protocol):
     dirty: bool
     exit_codes: tuple[int, ...]
     prior_gates: tuple[str, ...]
+    reason: str | None
 
 
 class GateVerifier(Protocol):
@@ -29,7 +33,6 @@ class GateVerifier(Protocol):
         require_prior: bool,
         *,
         repository_root: Path,
-        _test_policy: dict[str, object] | None = None,
     ) -> GateReportLike: ...
 
 
@@ -51,12 +54,13 @@ def write_config(root: Path, commands: dict[str, list[list[str]]] | None = None)
     command = [sys.executable, "-c", "raise SystemExit(0)"]
     configured = commands or {}
     milestones: dict[str, object] = {}
-    for number in range(5):
+    for number in range(10):
         milestone = f"M{number}"
         protected = ["requirements.lock"]
         if milestone == "M3":
             protected.append("artifacts/golden/synthetic_v1/backtest")
-        milestones[milestone] = {
+            protected.append("artifacts/golden/synthetic_v1/backtest.approval.json")
+        configuration: dict[str, object] = {
             "commands": configured.get(milestone, [command]),
             "evidence_paths": ["evidence.json"],
             "fixture_ids": ["synthetic-v1"],
@@ -65,13 +69,53 @@ def write_config(root: Path, commands: dict[str, list[list[str]]] | None = None)
                 f"python scripts/verify_milestone.py {milestone} --require-prior"
             ),
         }
+        if milestone == "M3":
+            configuration["golden_approval"] = {
+                "path": "artifacts/golden/synthetic_v1/backtest.approval.json",
+                "directory": "artifacts/golden/synthetic_v1/backtest",
+                "commit_subject": "chore(golden): approve M3 synthetic_v1 backtest",
+            }
+        milestones[milestone] = configuration
     (root / "configs").mkdir(exist_ok=True)
     (root / "configs" / "milestones.yaml").write_text(
         json.dumps({"milestones": milestones}), encoding="utf-8"
     )
 
 
-def initialize_repository(root: Path, *, evidence: bool = True) -> None:
+def directory_hash(path: Path) -> str:
+    digest = hashlib.sha256()
+    for child in sorted(path.rglob("*"), key=lambda item: item.relative_to(path).as_posix()):
+        if child.is_file():
+            name = child.relative_to(path).as_posix().encode("utf-8")
+            digest.update(name + b"\0" + hashlib.sha256(child.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def write_golden_approval(root: Path) -> Path:
+    directory = root / "artifacts" / "golden" / "synthetic_v1" / "backtest"
+    path = directory.with_suffix(".approval.json")
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "milestone": "M3",
+                "directory": "artifacts/golden/synthetic_v1/backtest",
+                "directory_sha256": directory_hash(directory),
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def initialize_repository(
+    root: Path,
+    *,
+    evidence: bool = True,
+    approval_subject: str = "chore(golden): approve M3 synthetic_v1 backtest",
+) -> None:
     git(root, "init", "-q")
     git(root, "config", "user.email", "test@example.com")
     git(root, "config", "user.name", "QuantLab Test")
@@ -84,6 +128,9 @@ def initialize_repository(root: Path, *, evidence: bool = True) -> None:
     write_config(root)
     git(root, "add", ".")
     git(root, "commit", "-qm", "initial inputs")
+    approval = write_golden_approval(root)
+    git(root, "add", approval)
+    git(root, "commit", "-qm", approval_subject)
 
 
 def receipt_path(root: Path, milestone: str) -> Path:
@@ -94,14 +141,28 @@ def transcript_path(root: Path, milestone: str) -> Path:
     return root / "artifacts" / "milestone-gates" / f"{milestone}.transcript.json"
 
 
+def challenge_path(root: Path, milestone: str) -> Path:
+    return root / "artifacts" / "milestone-gates" / f"{milestone}.challenge.json"
+
+
+def invoke_gate(
+    root: Path, gate_module: GateVerifier, milestone: str, require_prior: bool
+) -> GateReportLike:
+    policy_hash = hashlib.sha256((root / "configs" / "milestones.yaml").read_bytes()).hexdigest()
+    setattr(gate_module, "_CANONICAL_CONFIG_SHA256", policy_hash)
+    return gate_module.verify_milestone(milestone, require_prior, repository_root=root)
+
+
 def verify_gate(
     root: Path, gate_module: GateVerifier, milestone: str, require_prior: bool
 ) -> GateReportLike:
-    """Invoke the private test seam with the exact temporary-repository policy."""
-    policy = json.loads((root / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
-    return gate_module.verify_milestone(
-        milestone, require_prior, repository_root=root, _test_policy=policy
-    )
+    """Run a gate, committing a verifier-issued challenge when one is required."""
+    report = invoke_gate(root, gate_module, milestone, require_prior)
+    if report.reason == "challenge_created":
+        git(root, "add", challenge_path(root, milestone))
+        git(root, "commit", "-qm", f"chore(gate): challenge {milestone}")
+        report = invoke_gate(root, gate_module, milestone, require_prior)
+    return report
 
 
 def accept_gate(root: Path, gate_module: GateVerifier, milestone: str) -> None:
@@ -256,6 +317,40 @@ def test_gate_rejects_changed_golden_directory(tmp_path: Path, gate_module: Gate
     assert "M3:hash_changed" in report.prior_gates
 
 
+def test_gate_rejects_golden_change_before_first_m3_acceptance(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """A baseline changed after digest approval cannot be laundered into the first M3 receipt."""
+    initialize_repository(tmp_path)
+    for milestone in ("M0", "M1", "M2"):
+        accept_gate(tmp_path, gate_module, milestone)
+    golden = tmp_path / "artifacts" / "golden" / "synthetic_v1" / "backtest" / "manifest.json"
+    golden.write_text('{"golden":2}\n', encoding="utf-8")
+    git(tmp_path, "add", golden)
+    git(tmp_path, "commit", "-qm", "change unaccepted golden")
+
+    report = invoke_gate(tmp_path, gate_module, "M3", True)
+
+    assert report.status == "REJECTED"
+    assert report.reason == "golden_approval_digest_mismatch"
+    assert not receipt_path(tmp_path, "M3").exists()
+
+
+def test_gate_rejects_golden_approval_with_wrong_provenance(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """The expected M3 digest needs its dedicated, exact-subject approval commit."""
+    initialize_repository(tmp_path, approval_subject="add approval data")
+    for milestone in ("M0", "M1", "M2"):
+        accept_gate(tmp_path, gate_module, milestone)
+
+    report = invoke_gate(tmp_path, gate_module, "M3", True)
+
+    assert report.status == "REJECTED"
+    assert report.reason == "golden_approval_provenance_mismatch"
+    assert not receipt_path(tmp_path, "M3").exists()
+
+
 def test_gate_rejects_hand_authored_receipt_even_when_fields_match(
     tmp_path: Path, gate_module: GateVerifier
 ) -> None:
@@ -275,6 +370,122 @@ def test_gate_rejects_hand_authored_receipt_even_when_fields_match(
     assert report.status == "PASS"
     assert next_report.status == "REJECTED"
     assert next_report.prior_gates == ("M0:missing_transcript",)
+
+
+def test_gate_rejects_fully_hand_authored_receipt_and_transcript(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """Matching receipt and transcript JSON cannot substitute for verifier execution."""
+    initialize_repository(tmp_path)
+    policy = json.loads((tmp_path / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
+    command = shlex.join(policy["milestones"]["M0"]["commands"][0])
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    lock_hash = hashlib.sha256((tmp_path / "requirements.lock").read_bytes()).hexdigest()
+    config_hash = hashlib.sha256(
+        (tmp_path / "configs" / "milestones.yaml").read_bytes()
+    ).hexdigest()
+    evidence_hash = hashlib.sha256((tmp_path / "evidence.json").read_bytes()).hexdigest()
+    transcript = {
+        "schema_version": 1,
+        "milestone": "M0",
+        "git_sha": sha,
+        "commands": [command],
+        "exit_codes": [0],
+        "protected_file_hashes": {"requirements.lock": lock_hash},
+        "evidence_hashes": {"evidence.json": evidence_hash},
+        "prior_transcript_hashes": [],
+    }
+    transcript_bytes = json.dumps(transcript, sort_keys=True).encode("utf-8")
+    receipt = {
+        "schema_version": 3,
+        "milestone": "M0",
+        "status": "PASS",
+        "commands": [command],
+        "exit_codes": [0],
+        "git_sha": sha,
+        "dirty": False,
+        "dependency_lock_hash": lock_hash,
+        "config_hash": config_hash,
+        "transcript_hash": hashlib.sha256(transcript_bytes).hexdigest(),
+        "protected_file_hashes": {"requirements.lock": lock_hash},
+        "artifact_hashes": {"evidence.json": evidence_hash},
+        "evidence_hashes": {"evidence.json": evidence_hash},
+        "prior_gates": [],
+        "fixture_ids": ["synthetic-v1"],
+        "reason": None,
+    }
+    receipt_path(tmp_path, "M0").parent.mkdir(parents=True, exist_ok=True)
+    transcript_path(tmp_path, "M0").write_bytes(transcript_bytes)
+    receipt_path(tmp_path, "M0").write_text(
+        json.dumps(receipt, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    git(tmp_path, "add", receipt_path(tmp_path, "M0"), transcript_path(tmp_path, "M0"))
+    git(tmp_path, "commit", "-qm", "chore(gate): accept M0")
+
+    report = invoke_gate(tmp_path, gate_module, "M1", True)
+
+    assert report.status == "REJECTED"
+    assert report.prior_gates == ("M0:missing_challenge",)
+
+
+def test_gate_creates_challenge_before_running_commands(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """The first invocation issues a challenge and does not execute the gate command."""
+    initialize_repository(tmp_path)
+    marker = tmp_path / "command-ran.txt"
+    code = "from pathlib import Path; Path('command-ran.txt').write_text('ran')"
+    write_config(tmp_path, {"M0": [[sys.executable, "-c", code]]})
+    git(tmp_path, "add", "configs/milestones.yaml")
+    git(tmp_path, "commit", "-qm", "configure challenged gate")
+
+    report = invoke_gate(tmp_path, gate_module, "M0", False)
+
+    assert report.status == "REJECTED"
+    assert report.reason == "challenge_created"
+    assert challenge_path(tmp_path, "M0").is_file()
+    assert not marker.exists()
+
+
+def test_gate_transcript_binds_challenge_and_execution_hashes(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """Execution evidence binds command output and repository state to the challenge."""
+    initialize_repository(tmp_path)
+
+    report = verify_gate(tmp_path, gate_module, "M0", False)
+
+    transcript = json.loads(transcript_path(tmp_path, "M0").read_text(encoding="utf-8"))
+    command_run = transcript["command_runs"][0]
+    empty_hash = hashlib.sha256(b"").hexdigest()
+    assert report.status == "PASS"
+    assert (
+        transcript["challenge_hash"]
+        == hashlib.sha256(challenge_path(tmp_path, "M0").read_bytes()).hexdigest()
+    )
+    assert command_run["stdout_sha256"] == empty_hash
+    assert command_run["stderr_sha256"] == empty_hash
+    assert len(command_run["state_before_sha256"]) == 64
+    assert len(command_run["state_after_sha256"]) == 64
+
+
+def test_gate_production_api_rejects_policy_override(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """An ordinary verifier call cannot select a caller-provided gate policy."""
+    initialize_repository(tmp_path)
+    policy = json.loads((tmp_path / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
+
+    with pytest.raises(TypeError, match="_test_policy"):
+        gate_module.verify_milestone(  # type: ignore[call-arg]
+            "M0", False, repository_root=tmp_path, _test_policy=policy
+        )
 
 
 def test_gate_allows_latest_reacceptance_commit(tmp_path: Path, gate_module: GateVerifier) -> None:
@@ -435,3 +646,33 @@ def test_gate_rejects_mutation_after_candidate_receipt_write(
 
     assert report.status == "REJECTED"
     assert not receipt_path(tmp_path, "M0").exists()
+
+
+def test_gate_tombstones_pass_when_first_publication_replace_mutates_state(
+    tmp_path: Path, gate_module: GateVerifier, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A mutation during the first atomic publish cannot leave a PASS receipt."""
+    initialize_repository(tmp_path)
+    challenge_report = invoke_gate(tmp_path, gate_module, "M0", False)
+    assert challenge_report.reason == "challenge_created"
+    git(tmp_path, "add", challenge_path(tmp_path, "M0"))
+    git(tmp_path, "commit", "-qm", "chore(gate): challenge M0")
+    original_replace = os.replace
+    mutated = False
+
+    def mutate_on_first_replace(source: Path, destination: Path) -> None:
+        nonlocal mutated
+        original_replace(source, destination)
+        if not mutated:
+            mutated = True
+            (tmp_path / "requirements.lock").write_text("publication mutation\n", encoding="utf-8")
+
+    monkeypatch.setattr(os, "replace", mutate_on_first_replace)
+
+    report = invoke_gate(tmp_path, gate_module, "M0", False)
+
+    published = json.loads(receipt_path(tmp_path, "M0").read_text(encoding="utf-8"))
+    assert report.status == "REJECTED"
+    assert report.reason == "publication_changed"
+    assert mutated
+    assert published["status"] == "REJECTED"
