@@ -407,7 +407,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def app(arguments: Sequence[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(sys.argv[1:] if arguments is None else list(arguments))
+    try:
+        args = parser.parse_args(sys.argv[1:] if arguments is None else list(arguments))
+    except SystemExit as exc:
+        return int(exc.code or 0)
     if hasattr(args, "func"):
         return int(args.func(args))
     parser.print_help()
