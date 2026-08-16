@@ -9,9 +9,14 @@ import pytest
 
 from quantlab.domain.corporate_actions import CorporateAction, CorporateActionType
 from quantlab.domain.datasets import DatasetManifest, DatasetStatus
+from quantlab.domain.experiments import BacktestResult, Experiment, ExperimentStatus
 from quantlab.domain.identity import Instrument, InstrumentId, InstrumentStatus, InstrumentType
 from quantlab.domain.market import BarPriceSemantic, MarketBar
+from quantlab.domain.orders import Fill, Order, OrderSide, OrderState, OrderType
+from quantlab.domain.paper import PaperDeployment, PaperDeploymentStatus
+from quantlab.domain.portfolio import PortfolioSnapshot, Position, TargetPortfolio, TargetPosition
 from quantlab.domain.signals import AlphaSnapshot, Signal, SignalDirection
+from quantlab.domain.validation import ValidationResult, ValidationStatus
 
 
 def test_market_bar_rejects_naive_timestamp() -> None:
@@ -157,4 +162,138 @@ def test_invalid_boundary_cases_are_rejected() -> None:
             source="fixture",
             content_hash="",
             row_count=1,
+        )
+
+
+def test_order_state_transition_table() -> None:
+    instrument_id = InstrumentId.from_uuid(UUID("00000000-0000-0000-0000-000000000006"))
+    created = Order(
+        order_id="order-1",
+        instrument_id=instrument_id,
+        side=OrderSide.BUY,
+        order_type=OrderType.MARKET,
+        quantity=Decimal("10"),
+        state=OrderState.CREATED,
+        created_at=datetime(2024, 1, 31, 22, 1, tzinfo=UTC),
+    )
+
+    submitted = created.transition_to(
+        OrderState.SUBMITTED,
+        transitioned_at=datetime(2024, 1, 31, 22, 2, tzinfo=UTC),
+    )
+    partially_filled = submitted.transition_to(
+        OrderState.PARTIALLY_FILLED,
+        transitioned_at=datetime(2024, 1, 31, 22, 3, tzinfo=UTC),
+    )
+    filled = partially_filled.transition_to(
+        OrderState.FILLED,
+        transitioned_at=datetime(2024, 1, 31, 22, 4, tzinfo=UTC),
+    )
+
+    assert submitted.state is OrderState.SUBMITTED
+    assert partially_filled.state is OrderState.PARTIALLY_FILLED
+    assert filled.state is OrderState.FILLED
+    assert created.state is OrderState.CREATED
+
+    with pytest.raises(ValueError, match="illegal order state transition"):
+        created.transition_to(
+            OrderState.FILLED,
+            transitioned_at=datetime(2024, 1, 31, 22, 5, tzinfo=UTC),
+        )
+
+    with pytest.raises(ValueError, match="terminal"):
+        filled.transition_to(
+            OrderState.CANCELLED,
+            transitioned_at=datetime(2024, 1, 31, 22, 5, tzinfo=UTC),
+        )
+
+
+def test_remaining_contracts_are_immutable_and_validate_boundaries() -> None:
+    instrument_id = InstrumentId.from_uuid(UUID("00000000-0000-0000-0000-000000000007"))
+    target = TargetPosition(
+        instrument_id=instrument_id,
+        target_weight=Decimal("0.25"),
+        target_quantity=Decimal("12"),
+    )
+    target_portfolio = TargetPortfolio(
+        portfolio_id="target-1",
+        decision_time=datetime(2024, 1, 31, 22, 0, tzinfo=UTC),
+        positions=(target,),
+        source_alpha_snapshot_id="alpha-1",
+    )
+    fill = Fill(
+        fill_id="fill-1",
+        order_id="order-1",
+        instrument_id=instrument_id,
+        filled_at=datetime(2024, 2, 1, 14, 30, tzinfo=UTC),
+        quantity=Decimal("12"),
+        price=Decimal("10.50"),
+        fees=Decimal("0.25"),
+        source="fixture",
+    )
+    position = Position(
+        instrument_id=instrument_id,
+        quantity=Decimal("12"),
+        cost_basis=Decimal("126.00"),
+        market_value=Decimal("130.00"),
+    )
+    snapshot = PortfolioSnapshot(
+        portfolio_id="portfolio-1",
+        as_of=datetime(2024, 2, 1, 21, 0, tzinfo=UTC),
+        cash=Decimal("1000.00"),
+        positions=(position,),
+    )
+    experiment = Experiment(
+        experiment_id="experiment-1",
+        status=ExperimentStatus.LOCKED,
+        created_at=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
+        config_hash="abc123",
+        dataset_id="dataset-1",
+    )
+    backtest = BacktestResult(
+        result_id="backtest-1",
+        experiment_id=experiment.experiment_id,
+        created_at=datetime(2024, 2, 2, 12, 0, tzinfo=UTC),
+        equity_curve_hash="curve123",
+        annual_return=Decimal("0.10"),
+        max_drawdown=Decimal("-0.12"),
+    )
+    validation = ValidationResult(
+        validation_id="validation-1",
+        status=ValidationStatus.PASS,
+        created_at=datetime(2024, 2, 2, 13, 0, tzinfo=UTC),
+        subject_id=backtest.result_id,
+        summary="lockbox passed",
+    )
+    deployment = PaperDeployment(
+        deployment_id="paper-1",
+        status=PaperDeploymentStatus.READY,
+        created_at=datetime(2024, 2, 2, 14, 0, tzinfo=UTC),
+        experiment_id=experiment.experiment_id,
+        broker_account_ref="paper-account",
+    )
+
+    assert target_portfolio.positions == (target,)
+    assert snapshot.positions == (position,)
+    assert fill.price == Decimal("10.50")
+    assert validation.subject_id == "backtest-1"
+    assert deployment.experiment_id == "experiment-1"
+
+    with pytest.raises(FrozenInstanceError):
+        target.target_weight = Decimal("0.30")  # type: ignore[misc]
+
+    with pytest.raises(TypeError, match="Decimal"):
+        TargetPosition(
+            instrument_id=instrument_id,
+            target_weight=0.25,
+            target_quantity=None,
+        )
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        PaperDeployment(
+            deployment_id="paper-2",
+            status=PaperDeploymentStatus.READY,
+            created_at=datetime(2024, 2, 2, 14, 0),
+            experiment_id=experiment.experiment_id,
+            broker_account_ref="paper-account",
         )
