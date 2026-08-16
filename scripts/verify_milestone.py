@@ -268,10 +268,22 @@ def _run_command_with_evidence(
     command: Command, root: Path, config_file: Path, config: Mapping[str, object]
 ) -> tuple[int, dict[str, object]]:
     before = _state_sha256(root, config_file, config)
+    env = os.environ.copy()
+    actual_command = command
+    if isinstance(actual_command, str):
+        env_pattern = r"^([A-Za-z_][A-Za-z0-9_]*)=([^\s]+)\s+"
+        while True:
+            match = re.match(env_pattern, actual_command)
+            if not match:
+                break
+            k, v = match.group(1), match.group(2)
+            env[k] = v
+            actual_command = actual_command[match.end() :]
     completed = subprocess.run(
-        command,
+        actual_command,
         cwd=root,
-        shell=isinstance(command, str),
+        env=env,
+        shell=isinstance(actual_command, str),
         check=False,
         capture_output=True,
     )
