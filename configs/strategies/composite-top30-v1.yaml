@@ -1,0 +1,14 @@
+strategy_id: composite-top30-v1
+version: v1
+description: "Top-30 multi-factor composite portfolio with 40-name buffer rule"
+composite_id: composite-v1
+selection:
+  target_size: 30
+  buffer_size: 40
+weighting:
+  method: equal
+  cash_buffer_pct: 0.01
+  max_name_weight: 0.05
+rebalance:
+  frequency: monthly
+  schedule: month_end_close
