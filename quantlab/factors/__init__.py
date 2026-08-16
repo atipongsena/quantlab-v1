@@ -1,0 +1,1 @@
+"""QuantLab Factor Research Module."""

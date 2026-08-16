@@ -88,3 +88,6 @@ class PointInTimeDataFacade:
         rules: UniverseRule | None = None,
     ) -> tuple[InstrumentId, ...]:
         return self._universe_engine.get_tradable_universe(as_of=as_of, rules=rules)
+
+
+PointInTimeData = PointInTimeDataFacade
