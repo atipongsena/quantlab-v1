@@ -20,6 +20,7 @@ class CorporateActionType(StrEnum):
     SYMBOL_CHANGE = "symbol_change"
     MERGER = "merger"
     SPINOFF = "spinoff"
+    DELISTING = "delisting"
 
 
 @dataclass(frozen=True, slots=True)

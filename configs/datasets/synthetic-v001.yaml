@@ -1,0 +1,4 @@
+dataset_id: DATASET-v001
+version: v001
+fixture: synthetic_v1
+source_dir: data/fixtures/synthetic_v1/source
