@@ -114,6 +114,20 @@ def test_invalid_boundary_cases_are_rejected() -> None:
             status=InstrumentStatus.DELISTED,
         )
 
+    with pytest.raises(TypeError, match="date without time"):
+        MarketBar(
+            instrument_id=instrument_id,
+            session=datetime(2024, 1, 2, tzinfo=UTC),
+            observed_at=datetime(2024, 1, 2, 21, 0, tzinfo=UTC),
+            open=Decimal("10.00"),
+            high=Decimal("11.00"),
+            low=Decimal("9.50"),
+            close=Decimal("10.50"),
+            volume=Decimal("1000"),
+            semantic=BarPriceSemantic.RAW,
+            source="fixture",
+        )
+
     with pytest.raises(ValueError, match="positive"):
         CorporateAction(
             instrument_id=instrument_id,

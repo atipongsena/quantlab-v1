@@ -8,6 +8,7 @@ from enum import StrEnum
 from quantlab.domain.identity import (
     InstrumentId,
     _require_nonempty,
+    require_date_only,
     require_positive_decimal,
     require_timezone_aware,
 )
@@ -37,8 +38,7 @@ class CorporateAction:
             raise TypeError("instrument_id must be InstrumentId")
         if not isinstance(self.action_type, CorporateActionType):
             raise TypeError("action_type must be CorporateActionType")
-        if not isinstance(self.effective_at, date):
-            raise TypeError("effective_at must be a date")
+        require_date_only(self.effective_at, "effective_at")
         require_timezone_aware(self.announced_at, "announced_at")
         require_timezone_aware(self.available_at, "available_at")
         if self.ratio is not None:

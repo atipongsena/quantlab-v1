@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
-from uuid import UUID, uuid4
+from uuid import UUID
 
 
 class InstrumentType(StrEnum):
@@ -20,10 +20,6 @@ class InstrumentStatus(StrEnum):
 @dataclass(frozen=True, slots=True)
 class InstrumentId:
     value: UUID
-
-    @classmethod
-    def new(cls) -> InstrumentId:
-        return cls(uuid4())
 
     @classmethod
     def from_uuid(cls, value: UUID) -> InstrumentId:
@@ -56,10 +52,10 @@ class Instrument:
         _require_type(self.instrument_type, InstrumentType, "instrument_type")
         _require_nonempty(self.exchange, "exchange")
         _require_nonempty(self.currency, "currency")
-        _require_type(self.active_from, date, "active_from")
+        require_date_only(self.active_from, "active_from")
         _require_type(self.status, InstrumentStatus, "status")
         if self.active_to is not None:
-            _require_type(self.active_to, date, "active_to")
+            require_date_only(self.active_to, "active_to")
             if self.active_to < self.active_from:
                 raise ValueError("active_to must be on or after active_from")
 
@@ -87,12 +83,17 @@ class SymbolHistory:
         _require_type(self.instrument_id, InstrumentId, "instrument_id")
         _require_nonempty(self.symbol, "symbol")
         _require_nonempty(self.exchange, "exchange")
-        _require_type(self.valid_from, date, "valid_from")
+        require_date_only(self.valid_from, "valid_from")
         _require_nonempty(self.source, "source")
         if self.valid_to is not None:
-            _require_type(self.valid_to, date, "valid_to")
+            require_date_only(self.valid_to, "valid_to")
             if self.valid_to < self.valid_from:
                 raise ValueError("valid_to must be on or after valid_from")
+
+
+def require_date_only(value: date, field_name: str) -> None:
+    if not isinstance(value, date) or isinstance(value, datetime):
+        raise TypeError(f"{field_name} must be a date without time")
 
 
 def require_timezone_aware(value: datetime, field_name: str) -> None:
