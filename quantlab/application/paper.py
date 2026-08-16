@@ -118,3 +118,33 @@ class PaperService:
             json.dump(result_payload, f, indent=2)
 
         return result_payload
+
+    def simulate_forward(
+        self,
+        deployment_id: str = "PAPER-SYNTHETIC",
+        sessions_range: str = "2024-01-01:2024-04-30",
+        output_path: Path | None = None,
+    ) -> dict[str, object]:
+        start_str, end_str = sessions_range.split(":")
+        start_date = date.fromisoformat(start_str)
+        end_date = date.fromisoformat(end_str)
+
+        from quantlab.paper.simulation import PaperForwardSimulator
+
+        evidence = PaperForwardSimulator.simulate(
+            deployment_id=deployment_id,
+            start_session=start_date,
+            end_session=end_date,
+        )
+
+        result_payload = evidence.as_dict()
+
+        out_file = (
+            output_path or self._base_dir / "artifacts" / "latest" / "paper-forward-evidence.json"
+        )
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(result_payload, f, indent=2)
+
+        return result_payload

@@ -11,7 +11,11 @@ from apps.cli.commands.factor import (
     run_factor_research,
 )
 from apps.cli.commands.model import run_model_compare
-from apps.cli.commands.paper import run_paper_reconcile, run_paper_run
+from apps.cli.commands.paper import (
+    run_paper_reconcile,
+    run_paper_run,
+    run_paper_simulate,
+)
 from apps.cli.commands.red_team import run_red_team
 from apps.cli.commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
@@ -344,6 +348,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", choices=["text", "json"], default="text", help="Output format"
     )
     paper_reconcile_cmd.set_defaults(func=run_paper_reconcile)
+
+    paper_simulate_cmd = paper_subparsers.add_parser(
+        "simulate", help="Run multi-session paper forward operational simulation"
+    )
+    paper_simulate_cmd.add_argument("--deployment", default="PAPER-SYNTHETIC", help="Deployment ID")
+    paper_simulate_cmd.add_argument(
+        "--sessions", default="2024-01-01:2024-04-30", help="Session date range (START:END)"
+    )
+    paper_simulate_cmd.add_argument(
+        "--clock", default="fixture", help="Clock mode (fixture or realtime)"
+    )
+    paper_simulate_cmd.add_argument(
+        "--offline", action="store_true", help="Run in strict offline mode"
+    )
+    paper_simulate_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
+    paper_simulate_cmd.set_defaults(func=run_paper_simulate)
 
     return parser
 

@@ -69,3 +69,30 @@ def run_paper_reconcile(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("Status: PASS [Reconciliation completed successfully]")
     return 0
+
+
+def run_paper_simulate(args: argparse.Namespace) -> int:
+    service = PaperService()
+
+    res = service.simulate_forward(
+        deployment_id=getattr(args, "deployment", "PAPER-SYNTHETIC"),
+        sessions_range=getattr(args, "sessions", "2024-01-01:2024-04-30"),
+    )
+
+    if getattr(args, "output", "text") == "json":
+        print(json.dumps(res, indent=2))
+        return 0
+
+    print("=" * 70)
+    print("QuantLab Operational Paper Forward Simulation")
+    print("=" * 70)
+    print(f"Deployment ID    : {res['deployment_id']}")
+    print(f"Date Range       : {res['start_date']} to {res['end_date']}")
+    print(f"Trading Sessions : {res['total_sessions']}")
+    print(f"Total Orders     : {res['orders_count']}")
+    print(f"Total Fills      : {res['fills_count']}")
+    print(f"Clean Reconciles : {res['clean_reconciliations']}")
+    print(f"Ending Equity    : ${res['total_equity']}")
+    print("=" * 70)
+    print("Status: PASS [Paper forward simulation completed successfully]")
+    return 0
