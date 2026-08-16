@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "milestone": "M3",
+  "directory": "artifacts/golden/synthetic_v1/backtest",
+  "directory_sha256": "40716838e470aece0fcbddfe7b30bef125ee846ada8956b3e56ddb86741e8b0a"
+}
