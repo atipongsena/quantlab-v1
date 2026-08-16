@@ -29,7 +29,7 @@ class GateVerifier(Protocol):
         require_prior: bool,
         *,
         repository_root: Path,
-        config_path: Path | None = None,
+        _test_policy: dict[str, object] | None = None,
     ) -> GateReportLike: ...
 
 
@@ -90,17 +90,31 @@ def receipt_path(root: Path, milestone: str) -> Path:
     return root / "artifacts" / "milestone-gates" / f"{milestone}.json"
 
 
+def transcript_path(root: Path, milestone: str) -> Path:
+    return root / "artifacts" / "milestone-gates" / f"{milestone}.transcript.json"
+
+
+def verify_gate(
+    root: Path, gate_module: GateVerifier, milestone: str, require_prior: bool
+) -> GateReportLike:
+    """Invoke the private test seam with the exact temporary-repository policy."""
+    policy = json.loads((root / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
+    return gate_module.verify_milestone(
+        milestone, require_prior, repository_root=root, _test_policy=policy
+    )
+
+
 def accept_gate(root: Path, gate_module: GateVerifier, milestone: str) -> None:
-    report = gate_module.verify_milestone(milestone, milestone != "M0", repository_root=root)
+    report = verify_gate(root, gate_module, milestone, milestone != "M0")
     assert report.status == "PASS", report.prior_gates
-    git(root, "add", receipt_path(root, milestone))
+    git(root, "add", receipt_path(root, milestone), transcript_path(root, milestone))
     git(root, "commit", "-qm", f"chore(gate): accept {milestone}")
 
 
 def test_gate_rejects_missing_prior(tmp_path: Path, gate_module: GateVerifier) -> None:
     """Deleting M0 acceptance must prevent M1 acceptance."""
     initialize_repository(tmp_path)
-    report = gate_module.verify_milestone("M1", True, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M1", True)
     assert report.status == "REJECTED"
     assert report.prior_gates == ("M0:missing",)
 
@@ -109,7 +123,7 @@ def test_gate_rejects_dirty_tree(tmp_path: Path, gate_module: GateVerifier) -> N
     """An uncommitted input mutation cannot produce a PASS receipt."""
     initialize_repository(tmp_path)
     (tmp_path / "evidence.json").write_text('{"fixture":"changed"}\n', encoding="utf-8")
-    report = gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M0", False)
     assert report.status == "REJECTED"
     assert report.dirty is True
     assert not receipt_path(tmp_path, "M0").exists()
@@ -121,7 +135,7 @@ def test_gate_rejects_failed_command(tmp_path: Path, gate_module: GateVerifier) 
     write_config(tmp_path, {"M0": [[sys.executable, "-c", "raise SystemExit(7)"]]})
     git(tmp_path, "add", "configs/milestones.yaml")
     git(tmp_path, "commit", "-qm", "configure failing gate")
-    report = gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M0", False)
     assert report.status == "REJECTED"
     assert report.exit_codes == (7,)
 
@@ -130,7 +144,7 @@ def test_gate_hashes_evidence(tmp_path: Path, gate_module: GateVerifier) -> None
     """A committed, unchanged M0 receipt authorizes the next gate."""
     initialize_repository(tmp_path)
     accept_gate(tmp_path, gate_module, "M0")
-    report = gate_module.verify_milestone("M1", True, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M1", True)
     assert report.status == "PASS", report.prior_gates
     assert report.prior_gates == ("M0:PASS",)
     receipt = json.loads(receipt_path(tmp_path, "M1").read_text(encoding="utf-8"))
@@ -157,7 +171,7 @@ def test_gate_rejects_inauthentic_prior_receipts(
     if corruption == "modified":
         git(tmp_path, "add", path)
         git(tmp_path, "commit", "-qm", "tamper receipt")
-    report = gate_module.verify_milestone("M1", True, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M1", True)
     assert report.status == "REJECTED"
     assert not receipt_path(tmp_path, "M1").exists()
 
@@ -168,7 +182,7 @@ def test_gate_rejects_false_prior_requirement_for_later_milestone(
     """Passing false for M1 must not bypass its required M0 gate."""
     initialize_repository(tmp_path)
     accept_gate(tmp_path, gate_module, "M0")
-    assert gate_module.verify_milestone("M1", False, repository_root=tmp_path).status == "REJECTED"
+    assert verify_gate(tmp_path, gate_module, "M1", False).status == "REJECTED"
 
 
 def test_gate_rejects_unsafe_config_and_receipt_paths(
@@ -178,13 +192,17 @@ def test_gate_rejects_unsafe_config_and_receipt_paths(
     initialize_repository(tmp_path)
     external = tmp_path.parent / "outside.yaml"
     external.write_text("{}", encoding="utf-8")
+    (tmp_path / "configs" / "milestones.yaml").unlink()
+    (tmp_path / "configs" / "milestones.yaml").symlink_to(external)
     with pytest.raises(ValueError):
-        gate_module.verify_milestone("M0", False, repository_root=tmp_path, config_path=external)
+        gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+    (tmp_path / "configs" / "milestones.yaml").unlink()
+    write_config(tmp_path)
     gate_directory = tmp_path / "artifacts" / "milestone-gates"
     gate_directory.parent.mkdir(exist_ok=True)
     gate_directory.symlink_to(tmp_path.parent, target_is_directory=True)
     with pytest.raises(ValueError):
-        gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+        verify_gate(tmp_path, gate_module, "M0", False)
 
 
 def test_gate_rejects_command_time_input_mutation(
@@ -196,7 +214,20 @@ def test_gate_rejects_command_time_input_mutation(
     write_config(tmp_path, {"M0": [[sys.executable, "-c", code]]})
     git(tmp_path, "add", "configs/milestones.yaml")
     git(tmp_path, "commit", "-qm", "configure mutating gate")
-    assert gate_module.verify_milestone("M0", False, repository_root=tmp_path).status == "REJECTED"
+    assert verify_gate(tmp_path, gate_module, "M0", False).status == "REJECTED"
+
+
+def test_gate_rejects_command_time_config_mutation(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """A command that changes the configured policy cannot receive PASS."""
+    initialize_repository(tmp_path)
+    code = "from pathlib import Path; Path('configs/milestones.yaml').write_text('{}')"
+    write_config(tmp_path, {"M0": [[sys.executable, "-c", code]]})
+    git(tmp_path, "add", "configs/milestones.yaml")
+    git(tmp_path, "commit", "-qm", "configure policy mutator")
+
+    assert verify_gate(tmp_path, gate_module, "M0", False).status == "REJECTED"
 
 
 def test_gate_hashes_evidence_created_by_command(tmp_path: Path, gate_module: GateVerifier) -> None:
@@ -206,7 +237,7 @@ def test_gate_hashes_evidence_created_by_command(tmp_path: Path, gate_module: Ga
     write_config(tmp_path, {"M0": [[sys.executable, "-c", code]]})
     git(tmp_path, "add", "configs/milestones.yaml")
     git(tmp_path, "commit", "-qm", "configure evidence writer")
-    report = gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M0", False)
     assert report.status == "PASS"
     assert json.loads(receipt_path(tmp_path, "M0").read_text())["evidence_hashes"]
 
@@ -220,6 +251,174 @@ def test_gate_rejects_changed_golden_directory(tmp_path: Path, gate_module: Gate
     golden.write_text('{"golden":2}\n', encoding="utf-8")
     git(tmp_path, "add", golden)
     git(tmp_path, "commit", "-qm", "change golden")
-    report = gate_module.verify_milestone("M4", True, repository_root=tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M4", True)
     assert report.status == "REJECTED"
     assert "M3:hash_changed" in report.prior_gates
+
+
+def test_gate_rejects_hand_authored_receipt_even_when_fields_match(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """Replaying a valid receipt without its execution transcript is not acceptance."""
+    initialize_repository(tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M0", False)
+    payload = receipt_path(tmp_path, "M0").read_text(encoding="utf-8")
+    receipt_path(tmp_path, "M0").unlink()
+    transcript_path(tmp_path, "M0").unlink()
+    receipt_path(tmp_path, "M0").parent.mkdir(parents=True, exist_ok=True)
+    receipt_path(tmp_path, "M0").write_text(payload, encoding="utf-8")
+    git(tmp_path, "add", receipt_path(tmp_path, "M0"))
+    git(tmp_path, "commit", "-qm", "chore(gate): accept M0")
+
+    next_report = verify_gate(tmp_path, gate_module, "M1", True)
+
+    assert report.status == "PASS"
+    assert next_report.status == "REJECTED"
+    assert next_report.prior_gates == ("M0:missing_transcript",)
+
+
+def test_gate_allows_latest_reacceptance_commit(tmp_path: Path, gate_module: GateVerifier) -> None:
+    """A later valid acceptance supersedes, rather than invalidates, the first receipt."""
+    initialize_repository(tmp_path)
+    accept_gate(tmp_path, gate_module, "M0")
+    report = verify_gate(tmp_path, gate_module, "M0", False)
+    assert report.status == "PASS"
+    git(tmp_path, "add", receipt_path(tmp_path, "M0"), transcript_path(tmp_path, "M0"))
+    git(tmp_path, "commit", "-qm", "chore(gate): accept M0")
+
+    next_report = verify_gate(tmp_path, gate_module, "M1", True)
+
+    assert next_report.status == "PASS"
+    assert next_report.prior_gates == ("M0:PASS",)
+
+
+@pytest.mark.parametrize("field", ["commands", "evidence_paths", "protected_paths"])
+def test_gate_rejects_weakened_canonical_policy(
+    tmp_path: Path, gate_module: GateVerifier, field: str
+) -> None:
+    """Empty canonical requirements cannot silently weaken a production gate."""
+    initialize_repository(tmp_path)
+    payload = json.loads((tmp_path / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
+    payload["milestones"]["M0"][field] = []
+    (tmp_path / "configs" / "milestones.yaml").write_text(json.dumps(payload), encoding="utf-8")
+    git(tmp_path, "add", "configs/milestones.yaml")
+    git(tmp_path, "commit", "-qm", "weaken policy")
+
+    with pytest.raises(ValueError, match="canonical"):
+        gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+
+
+def test_gate_rejects_omitted_canonical_policy_requirement(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """Omitting a canonical requirement cannot silently authorize a gate."""
+    initialize_repository(tmp_path)
+    payload = json.loads((tmp_path / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
+    del payload["milestones"]["M3"]["protected_paths"]
+    (tmp_path / "configs" / "milestones.yaml").write_text(json.dumps(payload), encoding="utf-8")
+    git(tmp_path, "add", "configs/milestones.yaml")
+    git(tmp_path, "commit", "-qm", "omit golden policy")
+
+    with pytest.raises(ValueError, match="canonical"):
+        gate_module.verify_milestone("M3", True, repository_root=tmp_path)
+
+
+def test_gate_rejects_reordered_canonical_policy(tmp_path: Path, gate_module: GateVerifier) -> None:
+    """Canonical M0-to-M9 ordering is part of the production trust root."""
+    initialize_repository(tmp_path)
+    payload = json.loads((tmp_path / "configs" / "milestones.yaml").read_text(encoding="utf-8"))
+    milestones = payload["milestones"]
+    payload["milestones"] = {"M1": milestones["M1"], "M0": milestones["M0"], **milestones}
+    (tmp_path / "configs" / "milestones.yaml").write_text(json.dumps(payload), encoding="utf-8")
+    git(tmp_path, "add", "configs/milestones.yaml")
+    git(tmp_path, "commit", "-qm", "reorder policy")
+
+    with pytest.raises(ValueError, match="canonical"):
+        gate_module.verify_milestone("M0", False, repository_root=tmp_path)
+
+
+def test_gate_rejects_broken_receipt_symlink_before_resolve(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """A dangling receipt symlink is rejected as a symlink, not merely a missing file."""
+    initialize_repository(tmp_path)
+    path = receipt_path(tmp_path, "M0")
+    path.parent.mkdir(parents=True)
+    path.symlink_to("not-there.json")
+
+    with pytest.raises(ValueError, match="symlink"):
+        verify_gate(tmp_path, gate_module, "M0", False)
+
+
+def test_gate_rejects_internal_evidence_symlink_before_hashing(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """An internal symlink is unsafe even when its target remains inside the repository."""
+    initialize_repository(tmp_path)
+    target = tmp_path / "evidence-target.json"
+    target.write_text('{"fixture":"synthetic-v1"}\n', encoding="utf-8")
+    (tmp_path / "evidence.json").unlink()
+    (tmp_path / "evidence.json").symlink_to(target.name)
+
+    with pytest.raises(ValueError, match="symlink"):
+        verify_gate(tmp_path, gate_module, "M0", False)
+
+
+def test_gate_rejects_wrong_acceptance_provenance(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """Receipt and transcript blobs need the required ancestor acceptance commit identity."""
+    initialize_repository(tmp_path)
+    report = verify_gate(tmp_path, gate_module, "M0", False)
+    assert report.status == "PASS"
+    git(tmp_path, "add", receipt_path(tmp_path, "M0"), transcript_path(tmp_path, "M0"))
+    git(tmp_path, "commit", "-qm", "pretend gate acceptance")
+
+    next_report = verify_gate(tmp_path, gate_module, "M1", True)
+
+    assert next_report.status == "REJECTED"
+    assert next_report.prior_gates == ("M0:invalid_acceptance_commit",)
+
+
+def test_gate_rejects_committed_evidence_change_after_acceptance(
+    tmp_path: Path, gate_module: GateVerifier
+) -> None:
+    """Changing accepted evidence invalidates the dependent receipt."""
+    initialize_repository(tmp_path)
+    accept_gate(tmp_path, gate_module, "M0")
+    (tmp_path / "evidence.json").write_text('{"fixture":"changed"}\n', encoding="utf-8")
+    git(tmp_path, "add", "evidence.json")
+    git(tmp_path, "commit", "-qm", "change evidence")
+
+    report = verify_gate(tmp_path, gate_module, "M1", True)
+
+    assert report.status == "REJECTED"
+    assert report.prior_gates == ("M0:hash_changed",)
+
+
+def test_gate_rejects_mutation_after_candidate_receipt_write(
+    tmp_path: Path, gate_module: GateVerifier, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A protected input changed after candidate creation prevents publication."""
+    initialize_repository(tmp_path)
+    original_write_text = Path.write_text
+
+    def delayed_mutation(
+        path: Path,
+        data: str,
+        *,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        result = original_write_text(path, data, encoding=encoding, errors=errors, newline=newline)
+        if path.name == "M0.tmp":
+            (tmp_path / "requirements.lock").write_text("late mutation\\n", encoding="utf-8")
+        return result
+
+    monkeypatch.setattr(Path, "write_text", delayed_mutation)
+
+    report = verify_gate(tmp_path, gate_module, "M0", False)
+
+    assert report.status == "REJECTED"
+    assert not receipt_path(tmp_path, "M0").exists()
