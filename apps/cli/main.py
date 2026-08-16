@@ -4,6 +4,11 @@ import argparse
 import sys
 from collections.abc import Sequence
 
+from apps.cli.commands.factor import (
+    run_factor_composite,
+    run_factor_list,
+    run_factor_research,
+)
 from quantlab.application.dataset_service import DatasetService
 from quantlab.application.doctor import DoctorService
 
@@ -121,6 +126,87 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify content hashes against manifest",
     )
     inspect_cmd.set_defaults(func=run_dataset_inspect)
+
+    # factor
+    factor_parser = subparsers.add_parser(
+        "factor",
+        help="Factor research and composite strategies",
+    )
+    factor_subparsers = factor_parser.add_subparsers(dest="factor_command", help="Factor actions")
+
+    factor_list_cmd = factor_subparsers.add_parser(
+        "list",
+        help="List all registered factors in catalog",
+    )
+    factor_list_cmd.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Output format",
+    )
+    factor_list_cmd.set_defaults(func=run_factor_list)
+
+    factor_res_cmd = factor_subparsers.add_parser(
+        "research",
+        help="Run factor research and IC evaluation",
+    )
+    factor_res_cmd.add_argument(
+        "factor_id",
+        help="Factor identifier (e.g. momentum_12_1, roe)",
+    )
+    factor_res_cmd.add_argument(
+        "--dataset",
+        required=True,
+        help="Dataset identifier (e.g. DATASET-v001)",
+    )
+    factor_res_cmd.add_argument(
+        "--start",
+        help="Start date YYYY-MM-DD",
+    )
+    factor_res_cmd.add_argument(
+        "--end",
+        help="End date YYYY-MM-DD",
+    )
+    factor_res_cmd.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Output format",
+    )
+    factor_res_cmd.set_defaults(func=run_factor_research)
+
+    factor_comp_cmd = factor_subparsers.add_parser(
+        "composite",
+        help="Evaluate multi-factor composite strategy",
+    )
+    factor_comp_cmd.add_argument(
+        "composite_id",
+        help="Composite model identifier (e.g. composite-v1)",
+    )
+    factor_comp_cmd.add_argument(
+        "--dataset",
+        required=True,
+        help="Dataset identifier (e.g. DATASET-v001)",
+    )
+    factor_comp_cmd.add_argument(
+        "--config",
+        help="Path to composite config YAML",
+    )
+    factor_comp_cmd.add_argument(
+        "--start",
+        help="Start date YYYY-MM-DD",
+    )
+    factor_comp_cmd.add_argument(
+        "--end",
+        help="End date YYYY-MM-DD",
+    )
+    factor_comp_cmd.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Output format",
+    )
+    factor_comp_cmd.set_defaults(func=run_factor_composite)
 
     return parser
 

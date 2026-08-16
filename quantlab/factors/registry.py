@@ -68,6 +68,9 @@ class FactorRegistry:
     def list_definitions(self) -> Sequence[FactorDefinition]:
         return [reg.definition for reg in self._factors.values()]
 
+    def list_factors(self) -> Sequence[FactorDefinition]:
+        return self.list_definitions()
+
     def list_factor_ids(self) -> Sequence[str]:
         return list(self._factors.keys())
 

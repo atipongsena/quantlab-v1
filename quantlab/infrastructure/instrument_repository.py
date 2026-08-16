@@ -23,6 +23,8 @@ class InstrumentRepository(Protocol):
 
     def get_instrument(self, instrument_id: InstrumentId) -> Instrument | None: ...
 
+    def list_all(self) -> tuple[Instrument, ...]: ...
+
     def upsert_identity(
         self,
         source_record: Instrument,
@@ -104,6 +106,29 @@ class SqlInstrumentRepository(InstrumentRepository):
                 active_to=date.fromisoformat(str(row["active_to"])) if row["active_to"] else None,
                 status=InstrumentStatus(str(row["status"])),
             )
+
+    def list_all(self) -> tuple[Instrument, ...]:
+        with self._engine.transaction() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM instruments ORDER BY instrument_id")
+            rows = cursor.fetchall()
+            instruments = [
+                Instrument(
+                    instrument_id=InstrumentId.from_uuid(UUID(str(row["instrument_id"]))),
+                    issuer_name=str(row["issuer_name"]),
+                    security_name=str(row["security_name"]),
+                    instrument_type=InstrumentType(str(row["instrument_type"])),
+                    exchange=str(row["exchange"]),
+                    currency=str(row["currency"]),
+                    active_from=date.fromisoformat(str(row["active_from"])),
+                    active_to=date.fromisoformat(str(row["active_to"]))
+                    if row["active_to"]
+                    else None,
+                    status=InstrumentStatus(str(row["status"])),
+                )
+                for row in rows
+            ]
+            return tuple(instruments)
 
     def upsert_identity(
         self,
