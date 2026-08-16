@@ -1,0 +1,12 @@
+name: equity-v1
+version: v1
+max_name_weight: 0.05
+max_sector_weight: 0.30
+max_unknown_sector_weight: 0.10
+gross_exposure_cap: 1.00
+min_cash_buffer_pct: 0.01
+max_adv_participation: 0.10
+no_trade_band_pct: 0.005
+min_trade_dollar: 100.0
+max_turnover_pct: 0.50
+max_iterations: 10
