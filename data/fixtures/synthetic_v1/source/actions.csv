@@ -1,0 +1,5 @@
+effective_date,symbol,action_type,value,split_ratio,from_symbol,to_symbol
+2020-05-10,AAPL,DIVIDEND,0.82,,,
+2020-08-31,AAPL,SPLIT,,4.0,,
+2022-06-09,META,SYMBOL_CHANGE,,,FB,META
+2021-12-31,DELIST_CORP,DELISTING,,,,

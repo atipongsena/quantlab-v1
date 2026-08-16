@@ -1,0 +1,35 @@
+{
+  "dataset_id": "synthetic_v1",
+  "version": "1.0.0",
+  "source_files": {
+    "actions.csv": {
+      "sha256": "00b9a0d5236460b3891f55fc63c61c44229253628e660f9840880552bd2a1fcb",
+      "byte_count": 213,
+      "row_count": 4
+    },
+    "fundamentals.csv": {
+      "sha256": "40631d8ac7a88d9624e1084d5c7227e7a6448c1bae7c6ae00b82b829c9174347",
+      "byte_count": 1867,
+      "row_count": 29
+    },
+    "listings.csv": {
+      "sha256": "30891bd30bef3688c8c029d424b7dc91c6ebd496c83aa73163918c0aa006efd5",
+      "byte_count": 374,
+      "row_count": 6
+    },
+    "prices.csv": {
+      "sha256": "e8edbed6ce85b3887ce9d9b983e7e23f13daa4ce56afaab02f3a16f76b3b6b5a",
+      "byte_count": 209579,
+      "row_count": 3910
+    }
+  },
+  "manifest_hash": "f4d27dd64349ef516d756dccdd9bdc5ad4211a96abf98aea592d023a61af2e43",
+  "decision_canaries": {
+    "2020-03-01": "AAPL 2019-12-31 net_income filed 2020-02-20, restated 2020-04-15",
+    "missing_open_date": "2021-06-15",
+    "delisting_symbol": "DELIST_CORP",
+    "rename": "FB -> META on 2022-06-09",
+    "split": "AAPL 4:1 on 2020-08-31",
+    "dividend": "AAPL 0.82 on 2020-05-10"
+  }
+}
