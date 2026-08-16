@@ -251,6 +251,12 @@ def build_parser() -> argparse.ArgumentParser:
     validate_run_cmd.add_argument(
         "--experiment", default="EXP-SYNTHETIC", help="Experiment identifier"
     )
+    validate_run_cmd.add_argument(
+        "--offline", action="store_true", help="Run in strict offline mode"
+    )
+    validate_run_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
     validate_run_cmd.set_defaults(func=run_validate)
 
     # Red-team subcommand
