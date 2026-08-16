@@ -281,9 +281,22 @@ def test_gate_allows_latest_reacceptance_commit(tmp_path: Path, gate_module: Gat
     """A later valid acceptance supersedes, rather than invalidates, the first receipt."""
     initialize_repository(tmp_path)
     accept_gate(tmp_path, gate_module, "M0")
+    prior_receipt = receipt_path(tmp_path, "M0").read_text(encoding="utf-8")
+    prior_transcript = transcript_path(tmp_path, "M0").read_text(encoding="utf-8")
+    (tmp_path / "reacceptance-preparation.txt").write_text("prepare\n", encoding="utf-8")
+    git(tmp_path, "add", "reacceptance-preparation.txt")
+    git(tmp_path, "commit", "-qm", "prepare M0 reacceptance")
     report = verify_gate(tmp_path, gate_module, "M0", False)
     assert report.status == "PASS"
-    git(tmp_path, "add", receipt_path(tmp_path, "M0"), transcript_path(tmp_path, "M0"))
+    assert receipt_path(tmp_path, "M0").read_text(encoding="utf-8") != prior_receipt
+    assert transcript_path(tmp_path, "M0").read_text(encoding="utf-8") != prior_transcript
+    git(
+        tmp_path,
+        "add",
+        "--renormalize",
+        receipt_path(tmp_path, "M0"),
+        transcript_path(tmp_path, "M0"),
+    )
     git(tmp_path, "commit", "-qm", "chore(gate): accept M0")
 
     next_report = verify_gate(tmp_path, gate_module, "M1", True)
