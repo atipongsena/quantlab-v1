@@ -1,0 +1,59 @@
+{
+  "report_id": "REP-quality-improves-momentum-v1",
+  "campaign_id": "quality-improves-momentum-v1",
+  "generated_at": "2026-08-16T21:05:59.551414+00:00",
+  "hypotheses_count": 1,
+  "verdicts": {
+    "HYP-001": "VALIDATED"
+  },
+  "falsification_summary": {
+    "total_falsification_checks": 1,
+    "all_passed": true,
+    "reports": [
+      {
+        "passed": true,
+        "lookahead_clean": true,
+        "dsr_passed": true,
+        "sensitivity_passed": true,
+        "cost_resilient": true,
+        "break_even_bps": 45.0,
+        "summary": "Hypothesis passed all 4 adversarial falsification vectors."
+      }
+    ]
+  },
+  "agent_dialogue_summary": {
+    "dialogue_id": "DLG-quality-improves-momentum-v1",
+    "total_messages": 4,
+    "messages": [
+      {
+        "sender_role": "IDEA_GENERATOR",
+        "content": "Hypothesis: High ROE Quality stocks filter out low-quality momentum traps, yielding superior risk-adjusted returns and higher Information Ratio.",
+        "metadata": {
+          "hypothesis_id": "HYP-001"
+        }
+      },
+      {
+        "sender_role": "FACTOR_ENGINEER",
+        "content": "Factor Spec: 0.60 * zscore(momentum_12_1) + 0.40 * zscore(quality_roe). Vector implementation achieves Sharpe 1.45, Rank IC 0.058.",
+        "metadata": {
+          "formula": "0.60 * zscore(momentum_12_1) + 0.40 * zscore(quality_roe)"
+        }
+      },
+      {
+        "sender_role": "VALIDATION_CRITIC",
+        "content": "Critic Assessment: No lookahead leakage detected in PIT alignment. Sensitivity surface is monotonic across lookback parameters [6M..12M]. Deflated Sharpe DSR = 0.91 (passes >0.80 multiple testing threshold).",
+        "metadata": {
+          "falsification_passed": true
+        }
+      },
+      {
+        "sender_role": "LEAD_STRATEGIST",
+        "content": "Verdict for HYP-001: VALIDATED. Verdict: VALIDATED. Promoted to PAPER_CANDIDATE. Hypothesis successfully verified across 5-fold walk-forward validation.",
+        "metadata": {
+          "verdict": "VALIDATED"
+        }
+      }
+    ]
+  },
+  "content_hash": "0cfd1aeef538a8f2246ec3926c4d23fff241bf81eea2e4e41242d77f1ab48f3f"
+}
