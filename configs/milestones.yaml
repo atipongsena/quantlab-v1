@@ -47,7 +47,7 @@
         "python scripts/check_scope.py M3"
       ],
       "verification_command": "python scripts/verify_milestone.py M3 --require-prior",
-      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py", "artifacts/golden/synthetic_v1/backtest"],
       "evidence_paths": ["artifacts/latest/backtest/manifest.json"],
       "fixture_ids": ["DATASET-v001", "synthetic_v1"]
     },
