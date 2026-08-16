@@ -57,6 +57,7 @@ class OfflineSocketGuard:
     _gethostbyaddr: Callable[..., Any] | None = None
     _getnameinfo: Callable[..., Any] | None = None
     _getfqdn: Callable[..., Any] | None = None
+    _sendmsg: Callable[..., Any] | None = None
 
     def install(self) -> None:
         """Install the guard, allowing nested callers to share one patch."""
@@ -70,6 +71,8 @@ class OfflineSocketGuard:
             type(self)._gethostbyaddr = socket.gethostbyaddr
             type(self)._getnameinfo = socket.getnameinfo
             type(self)._getfqdn = socket.getfqdn
+            if hasattr(socket.socket, "sendmsg"):
+                type(self)._sendmsg = socket.socket.sendmsg
             socket.socket.connect = _guarded_connect
             socket.socket.connect_ex = _guarded_connect_ex
             socket.socket.sendto = _guarded_sendto
@@ -79,6 +82,8 @@ class OfflineSocketGuard:
             socket.gethostbyaddr = _guarded_gethostbyaddr
             socket.getnameinfo = _guarded_getnameinfo
             socket.getfqdn = _guarded_getfqdn
+            if type(self)._sendmsg is not None:
+                socket.socket.sendmsg = _guarded_sendmsg
         type(self)._installations += 1
 
     def uninstall(self) -> None:
@@ -105,6 +110,8 @@ class OfflineSocketGuard:
             socket.gethostbyaddr = type(self)._gethostbyaddr
             socket.getnameinfo = type(self)._getnameinfo
             socket.getfqdn = type(self)._getfqdn
+            if type(self)._sendmsg is not None:
+                socket.socket.sendmsg = type(self)._sendmsg
             type(self)._connect = None
             type(self)._connect_ex = None
             type(self)._sendto = None
@@ -114,6 +121,7 @@ class OfflineSocketGuard:
             type(self)._gethostbyaddr = None
             type(self)._getnameinfo = None
             type(self)._getfqdn = None
+            type(self)._sendmsg = None
 
     def __enter__(self) -> OfflineSocketGuard:
         self.install()
@@ -143,6 +151,21 @@ def _guarded_sendto(connection: socket.socket, data: bytes, *arguments: object) 
         _raise_network_denied()
     assert OfflineSocketGuard._sendto is not None
     return OfflineSocketGuard._sendto(connection, data, *arguments)
+
+
+def _guarded_sendmsg(
+    connection: socket.socket,
+    buffers: object,
+    *arguments: object,
+    **keyword_arguments: object,
+) -> int:
+    address = keyword_arguments.get("address")
+    if len(arguments) == 3:
+        address = arguments[2]
+    if address is not None and not _socket_address_is_loopback(connection, address):
+        _raise_network_denied()
+    assert OfflineSocketGuard._sendmsg is not None
+    return OfflineSocketGuard._sendmsg(connection, buffers, *arguments, **keyword_arguments)
 
 
 def _guarded_getaddrinfo(host: object, *arguments: object, **keyword_arguments: object) -> Any:

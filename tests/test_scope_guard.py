@@ -60,6 +60,47 @@ def test_socket_guard_blocks_external_datagram_network() -> None:
     assert error.value.errno == errno.ENETUNREACH
 
 
+@pytest.mark.skipif(not hasattr(socket.socket, "sendmsg"), reason="sendmsg is unavailable")
+def test_socket_guard_controls_sendmsg_destinations() -> None:
+    """Removing sendmsg address checks would permit non-loopback datagrams."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        with offline_socket_guard():
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as connection:
+                with pytest.raises(OSError) as error:
+                    connection.sendmsg([b"quantlab"], [], 0, ("198.51.100.1", 443))
+
+                assert connection.sendmsg([b"quantlab"], [], 0, listener.getsockname()) == 8
+
+                connection.connect(listener.getsockname())
+                assert connection.sendmsg([b"quantlab"]) == 8
+
+        assert listener.recvfrom(16)[0] == b"quantlab"
+        assert listener.recvfrom(16)[0] == b"quantlab"
+    assert error.value.errno == errno.ENETUNREACH
+
+
+@pytest.mark.skipif(not hasattr(socket.socket, "sendmsg"), reason="sendmsg is unavailable")
+def test_socket_guard_restores_nested_sendmsg_installations() -> None:
+    """An inner guard removal must not restore sendmsg before the outer guard exits."""
+    original_sendmsg = socket.socket.sendmsg
+    outer_guard = offline_socket_guard()
+    inner_guard = offline_socket_guard()
+    outer_guard.install()
+    try:
+        inner_guard.install()
+        inner_guard.uninstall()
+
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as connection:
+            with pytest.raises(OSError) as error:
+                connection.sendmsg([b"quantlab"], [], 0, ("198.51.100.1", 443))
+    finally:
+        outer_guard.uninstall()
+
+    assert error.value.errno == errno.ENETUNREACH
+    assert socket.socket.sendmsg is original_sendmsg
+
+
 @pytest.mark.parametrize(
     ("resolver_name", "arguments"),
     [
