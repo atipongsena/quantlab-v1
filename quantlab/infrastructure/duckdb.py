@@ -42,7 +42,12 @@ class AnalyticalStore(Protocol):
         schema: Mapping[str, str] | None = None,
     ) -> PartitionRef: ...
 
-    def query(self, sql: str, refs: Sequence[PartitionRef]) -> list[dict[str, object]]: ...
+    def query(
+        self,
+        sql: str,
+        refs: Sequence[PartitionRef],
+        params: Sequence[object] | None = None,
+    ) -> list[dict[str, object]]: ...
 
 
 class LocalAnalyticalStore:
@@ -71,7 +76,12 @@ class LocalAnalyticalStore:
             schema=schema,
         )
 
-    def query(self, sql: str, refs: Sequence[PartitionRef]) -> list[dict[str, object]]:
+    def query(
+        self,
+        sql: str,
+        refs: Sequence[PartitionRef],
+        params: Sequence[object] | None = None,
+    ) -> list[dict[str, object]]:
         self._assert_read_only(sql)
 
         # In-memory SQLite engine for deterministic offline analytical querying
@@ -97,7 +107,10 @@ class LocalAnalyticalStore:
                     conn.execute(insert_sql, [str(row.get(col, "")) for col in columns])
 
             cursor = conn.cursor()
-            cursor.execute(sql)
+            if params is not None:
+                cursor.execute(sql, list(params))
+            else:
+                cursor.execute(sql)
             results = [dict(row) for row in cursor.fetchall()]
             return results
         except sqlite3.Error as err:
