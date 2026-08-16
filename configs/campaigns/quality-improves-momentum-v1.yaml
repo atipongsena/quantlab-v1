@@ -1,0 +1,21 @@
+campaign_id: "quality-improves-momentum-v1"
+name: "Quality Filtering on Cross-Sectional Momentum"
+description: "Autonomous investigation into whether fundamental quality overlays prevent momentum traps"
+
+dataset_id: "DATASET-v001"
+universe: "TOP30_SYNTHETIC"
+
+hypotheses:
+  - id: "HYP-001"
+    name: "Momentum ROE Composite"
+    premise: "Weighting stocks by 12-1M momentum filtered by positive ROE improves Sharpe and reduces drawdown"
+    factors:
+      - "momentum_12_1"
+      - "quality_roe"
+    formula: "0.60 * zscore(momentum_12_1) + 0.40 * zscore(quality_roe)"
+
+falsification:
+  lookahead_check: true
+  min_dsr: 0.80
+  cost_bps_stress: [5, 10, 20]
+  sensitivity_perturbation: 0.10

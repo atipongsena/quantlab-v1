@@ -1,0 +1,1 @@
+"""Research campaign test package."""
