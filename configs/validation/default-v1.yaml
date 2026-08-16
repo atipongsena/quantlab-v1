@@ -1,0 +1,35 @@
+validation_id: "default-v1"
+description: "QuantLab Baseline Validation and Overfitting Defense Configuration"
+
+partitions:
+  train:
+    start_date: "2015-01-01"
+    end_date: "2020-12-31"
+    purge_days: 21
+    embargo_days: 5
+  validation:
+    start_date: "2021-01-01"
+    end_date: "2023-12-31"
+    purge_days: 21
+    embargo_days: 5
+  test:
+    start_date: "2024-01-01"
+    end_date: "2025-12-31"
+    purge_days: 21
+    embargo_days: 0
+
+gates:
+  lookahead_tolerance_bps: 0.0
+  reproducibility_required: true
+  min_history_sessions: 252
+
+robustness:
+  top_k_grid: [20, 30, 50]
+  cost_bps_grid: [0.0, 5.0, 10.0, 20.0, 50.0]
+  weighting_methods: ["equal", "inverse_vol"]
+
+bootstrap:
+  method: "stationary_block"
+  block_length: 21
+  simulations: 1000
+  confidence_level: 0.95
