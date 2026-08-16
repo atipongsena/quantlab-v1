@@ -10,6 +10,7 @@ from apps.cli.commands.factor import (
     run_factor_list,
     run_factor_research,
 )
+from apps.cli.commands.model import run_model_compare
 from apps.cli.commands.red_team import run_red_team
 from apps.cli.commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
@@ -277,13 +278,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run specific attack case",
     )
     red_team_run_cmd.add_argument("--dataset", default="DATASET-v001", help="Dataset identifier")
-    red_team_run_cmd.add_argument(
+    red_team_run_cmd.set_defaults(func=run_red_team)
+
+    # Model subcommand
+    model_parser = subparsers.add_parser("model", help="Machine learning model comparison commands")
+    model_subparsers = model_parser.add_subparsers(dest="model_command", required=True)
+
+    model_compare_cmd = model_subparsers.add_parser(
+        "compare", help="Compare heuristic and ML ranking models across walk-forward folds"
+    )
+    model_compare_cmd.add_argument("--dataset", default="DATASET-v001", help="Dataset identifier")
+    model_compare_cmd.add_argument(
+        "--walk-forward",
+        default="configs/ml/walk-forward-v1.yaml",
+        help="Path to walk-forward config YAML",
+    )
+    model_compare_cmd.add_argument(
+        "--models",
+        default="composite,ridge,lightgbm",
+        help="Comma-separated model names to compare",
+    )
+    model_compare_cmd.add_argument(
         "--offline", action="store_true", help="Run in strict offline mode"
     )
-    red_team_run_cmd.add_argument(
+    model_compare_cmd.add_argument(
         "--output", choices=["text", "json"], default="text", help="Output format"
     )
-    red_team_run_cmd.set_defaults(func=run_red_team)
+    model_compare_cmd.set_defaults(func=run_model_compare)
 
     return parser
 

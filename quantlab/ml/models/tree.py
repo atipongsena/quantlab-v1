@@ -46,40 +46,35 @@ class SimpleDecisionTree:
         best_left_idx: list[int] = []
         best_right_idx: list[int] = []
 
-        total_var = sum((v - mean_y) ** 2 for v in y)
-
         for j in range(n_features):
-            feat_vals = sorted({X[i][j] for i in range(n_samples)})
-            if len(feat_vals) < 2:
-                continue
+            # Sort sample indices by feature j
+            sorted_indices = sorted(range(n_samples), key=lambda i: X[i][j])
+            sum_left = 0.0
+            total_sum = sum(y)
 
-            # Candidate thresholds
-            thresholds = [
-                (feat_vals[k] + feat_vals[k + 1]) / 2.0 for k in range(len(feat_vals) - 1)
-            ]
-            for thresh in thresholds:
-                left_idx = [i for i in range(n_samples) if X[i][j] <= thresh]
-                right_idx = [i for i in range(n_samples) if X[i][j] > thresh]
+            for k in range(n_samples - 1):
+                idx = sorted_indices[k]
+                sum_left += y[idx]
+                next_idx = sorted_indices[k + 1]
 
-                if not left_idx or not right_idx:
+                if X[idx][j] == X[next_idx][j]:
                     continue
 
-                left_y = [y[i] for i in left_idx]
-                right_y = [y[i] for i in right_idx]
+                count_left = k + 1
+                count_right = n_samples - count_left
+                sum_right = total_sum - sum_left
 
-                mean_l = sum(left_y) / len(left_y)
-                mean_r = sum(right_y) / len(right_y)
-
-                var_l = sum((v - mean_l) ** 2 for v in left_y)
-                var_r = sum((v - mean_r) ** 2 for v in right_y)
-
-                var_reduction = total_var - (var_l + var_r)
-                if var_reduction > best_var_reduction:
-                    best_var_reduction = var_reduction
+                var_red = (
+                    (sum_left**2 / count_left)
+                    + (sum_right**2 / count_right)
+                    - (total_sum**2 / n_samples)
+                )
+                if var_red > best_var_reduction:
+                    best_var_reduction = var_red
                     best_feat = j
-                    best_thresh = thresh
-                    best_left_idx = left_idx
-                    best_right_idx = right_idx
+                    best_thresh = (X[idx][j] + X[next_idx][j]) / 2.0
+                    best_left_idx = sorted_indices[:count_left]
+                    best_right_idx = sorted_indices[count_left:]
 
         if best_feat == -1:
             return TreeNode(is_leaf=True, leaf_value=mean_y)
