@@ -1,0 +1,57 @@
+{
+  "dataset_id": "DATASET-v001",
+  "version": "v001",
+  "manifest_hash": "e79948cf9698fe16190aae0610abf166746a8aa2d47f86082b210addcd403eb6",
+  "tables": {
+    "instruments": "76b0d1ec221d9f6542f2bf11edbc7a00d8de2741aff25e20c31008980c46536f",
+    "symbol_history": "bc7fc45e6af49c997e97a2fded7784a155d9ced0f6f3fd6bd0d464a41ef912ec",
+    "prices": "66a4e484a1e3d9c3325ce250a67a240292fbc36960d3b3d84e15019f03ac03f2",
+    "actions": "9caf6e4a0448c9789ecc9c6abb90a15c4e8ae80bcf80259e8c475ce718f84070",
+    "fundamentals": "0217ac7a928ac6961c52be25a5badfd2d2353c183868f1d3b971066cc6dbd345"
+  },
+  "row_counts": {
+    "instruments": 6,
+    "symbol_history": 6,
+    "prices": 3910,
+    "actions": 4,
+    "fundamentals": 29
+  },
+  "created_at": "2026-08-16T19:56:08.447779+00:00",
+  "quality_report": {
+    "dataset_id": "DATASET-v001",
+    "overall_status": "PASS",
+    "confidence_score": 1.0,
+    "checks": [
+      {
+        "name": "price_positivity",
+        "status": "PASS",
+        "message": "All prices are positive and volumes non-negative",
+        "details": {}
+      },
+      {
+        "name": "ohlc_integrity",
+        "status": "PASS",
+        "message": "All high/low boundaries satisfy OHLC constraints",
+        "details": {}
+      },
+      {
+        "name": "temporal_integrity",
+        "status": "PASS",
+        "message": "No observations found ahead of as_of",
+        "details": {}
+      },
+      {
+        "name": "calendar_alignment",
+        "status": "PASS",
+        "message": "All sessions fall on standard business weekdays",
+        "details": {}
+      },
+      {
+        "name": "chronological_order",
+        "status": "PASS",
+        "message": "Bars are strictly chronological per instrument",
+        "details": {}
+      }
+    ]
+  }
+}
