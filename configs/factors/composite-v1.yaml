@@ -1,0 +1,11 @@
+composite_id: composite-v1
+version: v1
+description: "QuantLab V1 multi-factor baseline composite"
+weights:
+  momentum_12_1: 0.30
+  roe: 0.25
+  earnings_yield: 0.20
+  revenue_growth: 0.15
+  volatility_60d: 0.10
+min_weight_fraction: 0.50
+normalize_method: zscore
