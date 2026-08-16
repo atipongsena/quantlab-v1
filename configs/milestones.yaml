@@ -1,0 +1,134 @@
+{
+  "milestones": {
+    "M0": {
+      "commands": [
+        "python -m pytest tests/domain tests/common tests/architecture tests/infrastructure tests/fixtures tests/application/test_doctor.py tests/test_milestone_gates.py -q",
+        "python -m ruff check .",
+        "python -m ruff format --check .",
+        "python -m mypy quantlab apps",
+        "docker compose config --quiet",
+        "quantlab doctor --offline",
+        "python scripts/check_scope.py M0"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M0 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "fixture_ids": ["synthetic-v1"]
+    },
+    "M1": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/data tests/universe tests/integration/test_instrument_repository.py tests/e2e/test_dataset_cli.py -q",
+        "quantlab dataset build configs/datasets/synthetic-v001.yaml --offline",
+        "quantlab dataset inspect DATASET-v001 --verify-hash",
+        "python scripts/check_scope.py M1"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M1 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/datasets/DATASET-v001/manifest.json"],
+      "fixture_ids": ["DATASET-v001"]
+    },
+    "M2": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/factors tests/application/test_factor_research.py tests/e2e/test_factor_cli.py tests/architecture/test_factor_dependencies.py -q",
+        "quantlab factor research momentum_12_1 --dataset DATASET-v001 --output json",
+        "quantlab factor composite composite-v1 --dataset DATASET-v001 --output json",
+        "python scripts/check_scope.py M2"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M2 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/factor-research.json"],
+      "fixture_ids": ["DATASET-v001"]
+    },
+    "M3": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/portfolio tests/backtest tests/analytics tests/e2e/test_backtest_cli.py -q",
+        "quantlab backtest run configs/strategies/composite-top30-v1.yaml --dataset DATASET-v001 --offline",
+        "python scripts/compare_golden.py artifacts/latest/backtest artifacts/golden/synthetic_v1/backtest",
+        "python scripts/check_scope.py M3"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M3 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/backtest/manifest.json"],
+      "fixture_ids": ["DATASET-v001", "synthetic_v1"]
+    },
+    "M4": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/validation tests/red_team -q",
+        "quantlab validate run configs/validation/default-v1.yaml --experiment EXP-SYNTHETIC --offline",
+        "quantlab red-team run --all --dataset DATASET-v001 --offline",
+        "python scripts/check_scope.py M4"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M4 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/validation-report.json"],
+      "fixture_ids": ["DATASET-v001", "EXP-SYNTHETIC"]
+    },
+    "M5": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/ml tests/architecture/test_ml_boundaries.py tests/e2e/test_model_comparison_cli.py -q",
+        "quantlab model compare --dataset DATASET-v001 --walk-forward configs/ml/walk-forward-v1.yaml --models composite,ridge,lightgbm --offline",
+        "python scripts/check_scope.py M5"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M5 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/model-comparison.json"],
+      "fixture_ids": ["DATASET-v001"]
+    },
+    "M6": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/paper tests/faults tests/e2e/test_paper_forward_flow.py -q",
+        "quantlab paper simulate --deployment PAPER-SYNTHETIC --sessions 2024-01-01:2024-04-30 --clock fixture --offline",
+        "python scripts/check_scope.py M6"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M6 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/paper-forward-evidence.json"],
+      "fixture_ids": ["PAPER-SYNTHETIC"]
+    },
+    "M7": {
+      "commands": [
+        "QUANTLAB_OFFLINE=1 python -m pytest tests/research tests/agents tests/mcp tests/e2e/test_agent_campaign.py -q",
+        "quantlab campaign run configs/campaigns/quality-improves-momentum-v1.yaml --llm fake --offline",
+        "quantlab report verify artifacts/latest/research-report.json",
+        "python scripts/check_scope.py M7"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M7 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/research-report.json"],
+      "fixture_ids": ["DATASET-v001"]
+    },
+    "M8": {
+      "commands": [
+        "python -m pytest tests/api tests/cli -q",
+        "cd apps/web && npm ci && npm run lint && npm run typecheck && npm test -- --runInBand && npm run build",
+        "cd ../..",
+        "python scripts/check_openapi_web_types.py",
+        "python scripts/check_scope.py M8"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M8 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/latest/openapi.json"],
+      "fixture_ids": ["DATASET-v001"]
+    },
+    "M9": {
+      "commands": [
+        "python -m pip install -e \".[dev]\"",
+        "QUANTLAB_OFFLINE=1 python scripts/run_v1_acceptance.py --config configs/releases/quantlab-v1.yaml",
+        "python -m pytest -q",
+        "python -m ruff check .",
+        "python -m ruff format --check .",
+        "python -m mypy quantlab apps",
+        "cd apps/web && npm ci && npm run lint && npm run typecheck && npm test -- --runInBand && npm run build",
+        "cd ../..",
+        "python scripts/security_scan.py",
+        "python scripts/restore_drill.py --fixture synthetic_v1",
+        "python scripts/verify_release.py --config configs/releases/quantlab-v1.yaml --offline",
+        "python scripts/check_scope.py M9"
+      ],
+      "verification_command": "python scripts/verify_milestone.py M9 --require-prior",
+      "protected_paths": ["pyproject.toml", "requirements.lock", "configs/milestones.yaml", "scripts/check_scope.py", "scripts/verify_milestone.py"],
+      "evidence_paths": ["artifacts/golden/v1-acceptance/manifest.json"],
+      "fixture_ids": ["DATASET-v001", "synthetic_v1"]
+    }
+  }
+}
