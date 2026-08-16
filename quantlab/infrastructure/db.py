@@ -56,9 +56,9 @@ class DatabaseEngine:
         try:
             yield conn
             conn.commit()
-        except Exception as err:
+        except Exception:
             conn.rollback()
-            raise DatabaseError(f"Transaction rolled back: {err}") from err
+            raise
         finally:
             if self._memory_conn is None:
                 conn.close()

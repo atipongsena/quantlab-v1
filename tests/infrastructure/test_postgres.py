@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 from migrations.env import rollback_migration, run_migrations
-from quantlab.common.errors import QuantLabError
 from quantlab.infrastructure.db import DatabaseConfig, DatabaseEngine
 
 
@@ -39,7 +38,7 @@ def test_transaction_rollback_on_error() -> None:
     engine = DatabaseEngine(DatabaseConfig(url="sqlite:///:memory:"))
     run_migrations(engine)
 
-    with pytest.raises(QuantLabError, match="Transaction rolled back"):
+    with pytest.raises(RuntimeError, match="Forced simulation error"):
         with engine.transaction() as conn:
             conn.execute(
                 "INSERT INTO schema_migrations (version, applied_at) VALUES ('v_test', 'now')"
