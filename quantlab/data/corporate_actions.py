@@ -129,42 +129,32 @@ def compute_cumulative_adjustment_factors(
         if (as_of is None or a.available_at <= as_of) and a.effective_at > sorted_bars[0].session
     ]
 
-    # Map each session to its discrete per-day factor on that day
-    step_price_factors: dict[date, Decimal] = {}
-    step_volume_factors: dict[date, Decimal] = {}
-
+    # Compute factors for each action
+    action_factors: list[tuple[date, Decimal, Decimal]] = []
     for a in valid_actions:
         eff = a.effective_at
+        p_fac = Decimal("1")
+        v_fac = Decimal("1")
         if a.action_type == CorporateActionType.SPLIT and a.ratio is not None:
-            # Price is multiplied by 1/ratio for all bars before effective_at
-            # Volume is multiplied by ratio for all bars before effective_at
-            p_factor = Decimal("1") / a.ratio
-            v_factor = a.ratio
-            step_price_factors[eff] = step_price_factors.get(eff, Decimal("1")) * p_factor
-            step_volume_factors[eff] = step_volume_factors.get(eff, Decimal("1")) * v_factor
+            p_fac = Decimal("1") / a.ratio
+            v_fac = a.ratio
         elif a.action_type == CorporateActionType.DIVIDEND and a.cash_amount is not None:
-            # Find prior trading bar close price
             prior_bars = [b for b in sorted_bars if b.session < eff]
             if prior_bars:
                 prior_close = prior_bars[-1].close
                 if prior_close > a.cash_amount:
-                    div_factor = (prior_close - a.cash_amount) / prior_close
-                    step_price_factors[eff] = step_price_factors.get(eff, Decimal("1")) * div_factor
+                    p_fac = (prior_close - a.cash_amount) / prior_close
+        action_factors.append((eff, p_fac, v_fac))
 
-    # Compute cumulative factors backwards from latest session to earliest
     cumulative_factors: dict[date, tuple[Decimal, Decimal]] = {}
-    running_p = Decimal("1")
-    running_v = Decimal("1")
-
-    # Walk backwards through dates
-    all_sessions = [b.session for b in sorted_bars]
-    for session in reversed(all_sessions):
-        cumulative_factors[session] = (running_p, running_v)
-        # Apply factor to earlier bars
-        if session in step_price_factors:
-            running_p *= step_price_factors[session]
-        if session in step_volume_factors:
-            running_v *= step_volume_factors[session]
+    for bar in sorted_bars:
+        p_acc = Decimal("1")
+        v_acc = Decimal("1")
+        for eff, p_fac, v_fac in action_factors:
+            if bar.session < eff:
+                p_acc *= p_fac
+                v_acc *= v_fac
+        cumulative_factors[bar.session] = (p_acc, v_acc)
 
     return cumulative_factors
 
