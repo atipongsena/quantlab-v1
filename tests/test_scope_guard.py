@@ -44,6 +44,26 @@ def test_scope_rejects_premature_packages(tmp_path: Path) -> None:
     }
 
 
+def test_scope_rejects_premature_namespace_packages(tmp_path: Path) -> None:
+    """Removing directory checks would allow an uninitialized M8 web package in M0."""
+    (tmp_path / "apps" / "web").mkdir(parents=True)
+
+    exit_code, result = run_scope_check(tmp_path, "M0")
+
+    assert exit_code == 2
+    assert result == {
+        "milestone": "M0",
+        "status": "rejected",
+        "violations": [
+            {
+                "available_in": "M8",
+                "kind": "premature_package",
+                "path": "apps/web",
+            }
+        ],
+    }
+
+
 def test_scope_allows_m0_package_roots(tmp_path: Path) -> None:
     """The package boundaries explicitly introduced in M0 are accepted."""
     (tmp_path / "quantlab").mkdir()
@@ -53,6 +73,90 @@ def test_scope_allows_m0_package_roots(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert result == {"milestone": "M0", "status": "ok", "violations": []}
+
+
+def test_scope_rejects_forbidden_content_in_neutral_source_and_config_files(
+    tmp_path: Path,
+) -> None:
+    """Removing content checks would allow forbidden capabilities behind neutral paths."""
+    source_file = tmp_path / "quantlab" / "runner.py"
+    source_file.parent.mkdir()
+    source_file.write_text(
+        'execution_frequency = "intraday"\norder_destination = "live-money"\n',
+        encoding="utf-8",
+    )
+    config_file = tmp_path / "configs" / "runtime.toml"
+    config_file.parent.mkdir()
+    config_file.write_text(
+        'instrument_class = "options"\nderivative_kind = "derivatives"\nexposure = "leveraged"\n',
+        encoding="utf-8",
+    )
+
+    exit_code, result = run_scope_check(tmp_path, "M9")
+
+    assert exit_code == 2
+    assert result == {
+        "milestone": "M9",
+        "status": "rejected",
+        "violations": [
+            {
+                "kind": "forbidden_v1_feature",
+                "path": "quantlab/runner.py",
+                "rule": "live_money",
+            },
+            {
+                "kind": "forbidden_v1_feature",
+                "path": "quantlab/runner.py",
+                "rule": "intraday",
+            },
+            {
+                "kind": "forbidden_v1_feature",
+                "path": "configs/runtime.toml",
+                "rule": "options",
+            },
+            {
+                "kind": "forbidden_v1_feature",
+                "path": "configs/runtime.toml",
+                "rule": "derivatives",
+            },
+            {
+                "kind": "forbidden_v1_feature",
+                "path": "configs/runtime.toml",
+                "rule": "leverage",
+            },
+        ],
+    }
+
+
+def test_scope_rejects_premature_dependencies_in_metadata(tmp_path: Path) -> None:
+    """Removing metadata checks would allow M5 and M8 dependencies during M0."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\ndependencies = ["fastapi==0.1.0"]\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "requirements.lock").write_text("lightgbm==4.0.0\n", encoding="utf-8")
+
+    exit_code, result = run_scope_check(tmp_path, "M0")
+
+    assert exit_code == 2
+    assert result == {
+        "milestone": "M0",
+        "status": "rejected",
+        "violations": [
+            {
+                "available_in": "M8",
+                "dependency": "fastapi",
+                "kind": "premature_dependency",
+                "path": "pyproject.toml",
+            },
+            {
+                "available_in": "M5",
+                "dependency": "lightgbm",
+                "kind": "premature_dependency",
+                "path": "requirements.lock",
+            },
+        ],
+    }
 
 
 def test_scope_rejects_forbidden_v1_features(tmp_path: Path) -> None:

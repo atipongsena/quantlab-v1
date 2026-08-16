@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -37,32 +38,45 @@ PACKAGE_MILESTONES = {
     "apps/web": "M8",
 }
 
-FORBIDDEN_V1_FEATURES = (
-    "live_money",
-    "intraday",
-    "tick_data",
-    "high_frequency",
-    "options",
-    "futures",
-    "forex",
-    "crypto",
-    "shorting",
-    "leverage",
-    "borrow_model",
-    "reinforcement_learning",
-    "lstm",
-    "transformer",
-    "alternative_data",
-    "paid_data",
-    "factor_library",
-    "arbitrary_strategy_code",
-    "agent_swarm",
-    "kubernetes",
-    "spark",
-    "multi_tenancy",
-    "tax_accounting",
+FORBIDDEN_V1_FEATURE_RULES = (
+    ("live_money", r"\blive[-_\s]+(?:money|trading)\b"),
+    ("intraday", r"\bintraday\b"),
+    ("tick_data", r"\btick[-_\s]+data\b"),
+    ("high_frequency", r"\b(?:high[-_\s]+frequency|hft)\b"),
+    ("options", r"\boptions?\b"),
+    ("derivatives", r"\bderivatives?\b"),
+    ("futures", r"\bfutures?\b"),
+    ("forex", r"\bforex\b"),
+    ("crypto", r"\bcrypto(?:currency)?\b"),
+    ("shorting", r"\b(?:shorting|short[-_\s]+selling)\b"),
+    ("leverage", r"\bleverag(?:e|ed)\b"),
+    ("borrow_model", r"\bborrow[-_\s]+models?\b"),
+    ("reinforcement_learning", r"\breinforcement[-_\s]+learning\b"),
+    ("lstm", r"\blstms?\b"),
+    ("transformer", r"\btransformers?\b"),
+    ("alternative_data", r"\balternative[-_\s]+data\b"),
+    ("paid_data", r"\bpaid[-_\s]+data\b"),
+    ("factor_library", r"\bfactor[-_\s]+librar(?:y|ies)\b"),
+    ("arbitrary_strategy_code", r"\barbitrary[-_\s]+strategy[-_\s]+code\b"),
+    ("agent_swarm", r"\bagent[-_\s]+swarms?\b"),
+    ("kubernetes", r"\bkubernetes\b"),
+    ("spark", r"\bspark\b"),
+    ("multi_tenancy", r"\bmulti[-_\s]+tenan(?:cy|t)\b"),
+    ("tax_accounting", r"\btax[-_\s]+accounting\b"),
 )
-SOURCE_ROOTS = ("apps", "quantlab")
+PREMATURE_DEPENDENCIES = (
+    ("lightgbm", "M5"),
+    ("anthropic", "M7"),
+    ("langchain", "M7"),
+    ("llama-index", "M7"),
+    ("mcp", "M7"),
+    ("openai", "M7"),
+    ("fastapi", "M8"),
+)
+PACKAGE_ROOTS = ("apps", "quantlab")
+CONTENT_ROOTS = (*PACKAGE_ROOTS, "configs")
+CONTENT_SUFFIXES = {".cfg", ".ini", ".json", ".lock", ".py", ".toml", ".txt", ".yaml", ".yml"}
+DEPENDENCY_ARTIFACTS = ("pyproject.toml", "requirements.lock")
 
 
 def emit(payload: dict[str, object]) -> None:
@@ -79,43 +93,66 @@ def package_milestone(package: str) -> str | None:
 
 
 def package_violations(root: Path, milestone: str) -> list[dict[str, str]]:
-    """Find package initializers that are too early or unapproved."""
+    """Find package directories that are too early or unapproved."""
     current_index = MILESTONES.index(milestone)
     violations: list[dict[str, str]] = []
-    for source_root in SOURCE_ROOTS:
+    packages: set[str] = set()
+    for source_root in PACKAGE_ROOTS:
         source_path = root / source_root
         if not source_path.exists():
             continue
-        for initializer in sorted(source_path.rglob("__init__.py")):
-            package = initializer.parent.relative_to(root).as_posix()
-            available_in = package_milestone(package)
-            if available_in is None:
-                violations.append({"kind": "unapproved_package", "path": package})
-            elif MILESTONES.index(available_in) > current_index:
-                violations.append(
-                    {
-                        "available_in": available_in,
-                        "kind": "premature_package",
-                        "path": package,
-                    }
-                )
+        if (source_path / "__init__.py").is_file():
+            packages.add(source_root)
+        packages.update(
+            directory.relative_to(root).as_posix()
+            for directory in source_path.rglob("*")
+            if directory.is_dir() and not directory.name.startswith((".", "__"))
+        )
+
+    for package in sorted(packages):
+        available_in = package_milestone(package)
+        if available_in is None:
+            violations.append({"kind": "unapproved_package", "path": package})
+        elif MILESTONES.index(available_in) > current_index:
+            violations.append(
+                {
+                    "available_in": available_in,
+                    "kind": "premature_package",
+                    "path": package,
+                }
+            )
     return violations
 
 
-def feature_violations(root: Path) -> list[dict[str, str]]:
-    """Find source paths that implement an explicit V1 non-goal."""
-    source_paths = [
+def scoped_files(root: Path) -> list[Path]:
+    """Return source and configuration files whose content can define scope."""
+    files = {
         path
-        for source_root in SOURCE_ROOTS
-        if (source_path := root / source_root).exists()
-        for path in sorted(source_path.rglob("*"))
-        if path.is_file()
-    ]
+        for content_root in CONTENT_ROOTS
+        if (content_path := root / content_root).exists()
+        for path in content_path.rglob("*")
+        if path.is_file() and path.suffix.lower() in CONTENT_SUFFIXES
+    }
+    files.update(
+        root / artifact for artifact in DEPENDENCY_ARTIFACTS if (root / artifact).is_file()
+    )
+    return sorted(files, key=lambda path: path.relative_to(root).as_posix())
+
+
+def read_scope_text(path: Path) -> str:
+    """Read a scoped file without allowing encoding variance to skip a rule."""
+    return path.read_text(encoding="utf-8", errors="replace").lower()
+
+
+def feature_violations(root: Path) -> list[dict[str, str]]:
+    """Find forbidden V1 capabilities in scoped names and contents."""
+    files = scoped_files(root)
     violations: list[dict[str, str]] = []
-    for rule in FORBIDDEN_V1_FEATURES:
-        for source_path in source_paths:
+    for rule, pattern in FORBIDDEN_V1_FEATURE_RULES:
+        expression = re.compile(pattern)
+        for source_path in files:
             relative_path = source_path.relative_to(root).as_posix()
-            if rule in relative_path.lower():
+            if expression.search(f"{relative_path.lower()}\n{read_scope_text(source_path)}"):
                 violations.append(
                     {
                         "kind": "forbidden_v1_feature",
@@ -126,9 +163,34 @@ def feature_violations(root: Path) -> list[dict[str, str]]:
     return violations
 
 
+def dependency_violations(root: Path, milestone: str) -> list[dict[str, str]]:
+    """Find dependencies whose assigned milestone has not been reached."""
+    current_index = MILESTONES.index(milestone)
+    violations: list[dict[str, str]] = []
+    for source_path in scoped_files(root):
+        relative_path = source_path.relative_to(root).as_posix()
+        text = read_scope_text(source_path)
+        for dependency, available_in in PREMATURE_DEPENDENCIES:
+            expression = re.compile(rf"\b{re.escape(dependency)}\b")
+            if expression.search(text) and MILESTONES.index(available_in) > current_index:
+                violations.append(
+                    {
+                        "available_in": available_in,
+                        "dependency": dependency,
+                        "kind": "premature_dependency",
+                        "path": relative_path,
+                    }
+                )
+    return violations
+
+
 def check_scope(root: Path, milestone: str) -> list[dict[str, str]]:
     """Collect deterministic scope violations for a repository root."""
-    return [*package_violations(root, milestone), *feature_violations(root)]
+    return [
+        *package_violations(root, milestone),
+        *feature_violations(root),
+        *dependency_violations(root, milestone),
+    ]
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
