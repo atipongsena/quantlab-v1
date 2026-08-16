@@ -168,6 +168,8 @@ def dependency_violations(root: Path, milestone: str) -> list[dict[str, str]]:
     current_index = MILESTONES.index(milestone)
     violations: list[dict[str, str]] = []
     for source_path in scoped_files(root):
+        if source_path.is_relative_to(root / "configs"):
+            continue
         relative_path = source_path.relative_to(root).as_posix()
         text = read_scope_text(source_path)
         for dependency, available_in in PREMATURE_DEPENDENCIES:

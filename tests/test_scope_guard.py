@@ -2,13 +2,62 @@
 
 from __future__ import annotations
 
+import errno
 import json
+import socket
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+from tests.socket_guard import offline_socket_guard
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCOPE_CHECK = PROJECT_ROOT / "scripts" / "check_scope.py"
+
+
+@pytest.mark.parametrize(
+    ("family", "address"),
+    [
+        (socket.AF_INET, ("198.51.100.1", 443)),
+        (socket.AF_INET6, ("2001:db8::1", 443, 0, 0)),
+        (socket.AF_INET, ("example.com", 443)),
+    ],
+    ids=("ipv4", "ipv6", "hostname"),
+)
+def test_socket_guard_blocks_external_network(
+    family: socket.AddressFamily, address: tuple[object, ...]
+) -> None:
+    """Removing the offline address check would permit an external socket connection."""
+    with offline_socket_guard():
+        with socket.socket(family, socket.SOCK_STREAM) as connection:
+            with pytest.raises(OSError) as error:
+                connection.connect(address)
+
+    assert error.value.errno == errno.ENETUNREACH
+
+
+def test_socket_guard_permits_loopback_network() -> None:
+    """Treating a local integration socket as external would break its connection."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        with offline_socket_guard():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
+                connection.connect(listener.getsockname())
+            with listener.accept()[0] as accepted_connection:
+                assert accepted_connection.getpeername()[0] == "127.0.0.1"
+
+
+def test_socket_guard_blocks_external_datagram_network() -> None:
+    """Removing the datagram address check would send packets beyond loopback."""
+    with offline_socket_guard():
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as connection:
+            with pytest.raises(OSError) as error:
+                connection.sendto(b"quantlab", 0, ("198.51.100.1", 443))
+
+    assert error.value.errno == errno.ENETUNREACH
 
 
 def run_scope_check(root: Path, milestone: str) -> tuple[int, dict[str, object]]:
@@ -155,6 +204,47 @@ def test_scope_rejects_premature_dependencies_in_metadata(tmp_path: Path) -> Non
                 "kind": "premature_dependency",
                 "path": "requirements.lock",
             },
+        ],
+    }
+
+
+def test_scope_ignores_planned_dependencies_but_rejects_runtime_dependencies(
+    tmp_path: Path,
+) -> None:
+    """Treating policy prose as code would reject M0, while imports must still be denied."""
+    exit_code, result = run_scope_check(PROJECT_ROOT, "M0")
+
+    assert exit_code == 0
+    assert result == {"milestone": "M0", "status": "ok", "violations": []}
+
+    policy_file = tmp_path / "configs" / "milestones.yaml"
+    policy_file.parent.mkdir()
+    policy_file.write_text(
+        "# Planned milestones may use lightgbm and mcp.\n"
+        'command = "lightgbm compare --mcp local"\n',
+        encoding="utf-8",
+    )
+    exit_code, result = run_scope_check(tmp_path, "M0")
+
+    assert exit_code == 0
+    assert result == {"milestone": "M0", "status": "ok", "violations": []}
+
+    source_file = tmp_path / "quantlab" / "runner.py"
+    source_file.parent.mkdir()
+    source_file.write_text("import lightgbm\n", encoding="utf-8")
+    exit_code, result = run_scope_check(tmp_path, "M0")
+
+    assert exit_code == 2
+    assert result == {
+        "milestone": "M0",
+        "status": "rejected",
+        "violations": [
+            {
+                "available_in": "M5",
+                "dependency": "lightgbm",
+                "kind": "premature_dependency",
+                "path": "quantlab/runner.py",
+            }
         ],
     }
 
