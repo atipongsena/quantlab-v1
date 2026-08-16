@@ -1,0 +1,11 @@
+{
+  "deployment_id": "PAPER-SYNTHETIC",
+  "start_date": "2024-01-01",
+  "end_date": "2024-04-30",
+  "total_sessions": 87,
+  "orders_count": 2610,
+  "fills_count": 2610,
+  "clean_reconciliations": 87,
+  "total_equity": "996085.0000",
+  "content_hash": "0838bc3626835f7c3ee911cc647b7811de934f657239ae038b1622f49cf4b7c7"
+}
