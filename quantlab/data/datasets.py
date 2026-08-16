@@ -82,11 +82,4 @@ class DatasetPublisher:
             quality_report=quality_report,
         )
 
-        # Store manifest as artifact
-        artifact_content = json.dumps(manifest.as_dict(), indent=2).encode("utf-8")
-        self._artifact_store.put_bytes(
-            kind=f"datasets/{dataset_id}/{version}",
-            payload=artifact_content,
-        )
-
         return manifest
