@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
 import json
+from datetime import date
 from pathlib import Path
 
 from quantlab.application.factor_research import FactorResearchService

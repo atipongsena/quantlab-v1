@@ -4,6 +4,7 @@ import argparse
 import sys
 from collections.abc import Sequence
 
+from apps.cli.commands.backtest import run_backtest
 from apps.cli.commands.factor import (
     run_factor_composite,
     run_factor_list,
@@ -207,6 +208,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format",
     )
     factor_comp_cmd.set_defaults(func=run_factor_composite)
+
+    # Backtest subcommand
+    backtest_parser = subparsers.add_parser(
+        "backtest", help="Simulation and backtest engine commands"
+    )
+    backtest_subparsers = backtest_parser.add_subparsers(dest="backtest_command", required=True)
+
+    backtest_run_cmd = backtest_subparsers.add_parser(
+        "run", help="Run strategy backtest simulation"
+    )
+    backtest_run_cmd.add_argument(
+        "config",
+        help="Path to strategy config YAML (e.g. configs/strategies/composite-top30-v1.yaml)",
+    )
+    backtest_run_cmd.add_argument("--dataset", default="DATASET-v001", help="Dataset identifier")
+    backtest_run_cmd.add_argument(
+        "--offline", action="store_true", help="Run in strict offline mode"
+    )
+    backtest_run_cmd.add_argument("--start", help="Start date YYYY-MM-DD")
+    backtest_run_cmd.add_argument("--end", help="End date YYYY-MM-DD")
+    backtest_run_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
+    backtest_run_cmd.set_defaults(func=run_backtest)
 
     return parser
 
