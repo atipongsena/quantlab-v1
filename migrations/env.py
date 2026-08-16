@@ -9,6 +9,7 @@ from quantlab.infrastructure.db import DatabaseEngine
 MIGRATIONS: list[tuple[str, Any]] = [
     ("0001_foundation", importlib.import_module("migrations.versions.0001_foundation")),
     ("0002_instruments", importlib.import_module("migrations.versions.0002_instruments")),
+    ("0003_fundamentals", importlib.import_module("migrations.versions.0003_fundamentals")),
 ]
 
 
