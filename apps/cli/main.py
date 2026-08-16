@@ -5,6 +5,7 @@ import sys
 from collections.abc import Sequence
 
 from apps.cli.commands.backtest import run_backtest
+from apps.cli.commands.campaign import run_campaign_run
 from apps.cli.commands.factor import (
     run_factor_composite,
     run_factor_list,
@@ -17,6 +18,7 @@ from apps.cli.commands.paper import (
     run_paper_simulate,
 )
 from apps.cli.commands.red_team import run_red_team
+from apps.cli.commands.report import run_report_verify
 from apps.cli.commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
 from quantlab.application.doctor import DoctorService
@@ -366,6 +368,39 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", choices=["text", "json"], default="text", help="Output format"
     )
     paper_simulate_cmd.set_defaults(func=run_paper_simulate)
+
+    # Campaign subcommand
+    campaign_parser = subparsers.add_parser(
+        "campaign", help="Autonomous multi-agent research campaign commands"
+    )
+    campaign_subparsers = campaign_parser.add_subparsers(dest="campaign_command", required=True)
+
+    campaign_run_cmd = campaign_subparsers.add_parser(
+        "run", help="Run multi-agent hypothesis and research campaign"
+    )
+    campaign_run_cmd.add_argument("config", help="Path to campaign YAML configuration")
+    campaign_run_cmd.add_argument(
+        "--llm", choices=["fake", "live"], default="fake", help="LLM backend mode"
+    )
+    campaign_run_cmd.add_argument(
+        "--offline", action="store_true", help="Run in strict offline mode"
+    )
+    campaign_run_cmd.add_argument(
+        "--output", choices=["text", "json"], default="text", help="Output format"
+    )
+    campaign_run_cmd.set_defaults(func=run_campaign_run)
+
+    # Report subcommand
+    report_parser = subparsers.add_parser(
+        "report", help="Structured research report management commands"
+    )
+    report_subparsers = report_parser.add_subparsers(dest="report_command", required=True)
+
+    report_verify_cmd = report_subparsers.add_parser(
+        "verify", help="Cryptographically verify research report"
+    )
+    report_verify_cmd.add_argument("report_path", help="Path to research report JSON")
+    report_verify_cmd.set_defaults(func=run_report_verify)
 
     return parser
 
