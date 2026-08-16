@@ -70,6 +70,20 @@ class PointInTimeDataFacade:
             period_end=period_end,
         )
 
+    def get_fundamental(
+        self,
+        instrument_id: InstrumentId,
+        metric: str,
+        as_of: datetime,
+        period_end: date | None = None,
+    ) -> FundamentalValue | None:
+        return self.get_fundamentals(
+            instrument_id=instrument_id,
+            as_of=as_of,
+            metric=metric,
+            period_end=period_end,
+        )
+
     def get_macro(
         self,
         series_id: str,
