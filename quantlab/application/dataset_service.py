@@ -9,7 +9,13 @@ from uuid import NAMESPACE_DNS, uuid5
 
 import yaml  # type: ignore[import-untyped]
 
-from migrations.env import run_migrations
+try:
+    from migrations.env import run_migrations
+except ModuleNotFoundError:
+    import sys
+
+    sys.path.insert(0, str(Path.cwd()))
+    from migrations.env import run_migrations
 from quantlab.common.hashing import canonical_hash
 from quantlab.data.corporate_actions import (
     SqlCorporateActionStore,
