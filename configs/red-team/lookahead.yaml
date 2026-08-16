@@ -1,0 +1,13 @@
+case_id: "lookahead"
+name: "Future Information Leakage Canary"
+description: "Deliberately leaks next-session return into current factor snapshot"
+
+strategy:
+  strategy_id: "canary-lookahead-v1"
+  factor_id: "future_return_canary"
+  leakage_days: 1
+
+expected:
+  unprotected_sharpe: 4.5
+  protected_verdict: "REJECTED"
+  failed_gate: "lookahead_leakage"

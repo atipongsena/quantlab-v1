@@ -1,0 +1,12 @@
+case_id: "random-mining"
+name: "Data Mining and Multi-Trial Overfitting"
+description: "Mines 100 pure Gaussian noise factors to produce apparent statistical significance"
+
+mining:
+  n_noise_trials: 100
+  seed: 42
+
+expected:
+  best_unadjusted_sharpe: 1.65
+  deflated_sharpe_warned: true
+  protected_verdict: "RESEARCH_ONLY"

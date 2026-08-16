@@ -1,0 +1,16 @@
+case_id: "cost-illusion"
+name: "Frictional Illusion and Micro-Edge Fragility"
+description: "High-turnover strategy with gross edge that completely vanishes under friction"
+
+strategy:
+  strategy_id: "high-turnover-illusion"
+  annual_turnover: 25.0
+  gross_cagr: 0.03
+
+friction_grid_bps: [0.0, 5.0, 10.0, 20.0, 50.0]
+
+expected:
+  zero_cost_sharpe: 1.10
+  break_even_friction_bps: 6.0
+  is_cost_fragile: true
+  protected_verdict: "RESEARCH_ONLY"

@@ -10,6 +10,7 @@ from apps.cli.commands.factor import (
     run_factor_list,
     run_factor_research,
 )
+from apps.cli.commands.red_team import run_red_team
 from apps.cli.commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
 from quantlab.application.doctor import DoctorService
@@ -246,13 +247,33 @@ def build_parser() -> argparse.ArgumentParser:
     validate_run_cmd.add_argument(
         "--experiment", default="EXP-SYNTHETIC", help="Experiment identifier"
     )
-    validate_run_cmd.add_argument(
+    validate_run_cmd.set_defaults(func=run_validate)
+
+    # Red-team subcommand
+    red_team_parser = subparsers.add_parser(
+        "red-team", help="Active red teaming and falsification demonstrations"
+    )
+    red_team_subparsers = red_team_parser.add_subparsers(dest="red_team_command", required=True)
+
+    red_team_run_cmd = red_team_subparsers.add_parser(
+        "run", help="Run red team falsification attack cases"
+    )
+    red_team_run_cmd.add_argument(
+        "--all", action="store_true", help="Run all red team demonstration cases"
+    )
+    red_team_run_cmd.add_argument(
+        "--case",
+        choices=["lookahead", "random-mining", "cost-illusion"],
+        help="Run specific attack case",
+    )
+    red_team_run_cmd.add_argument("--dataset", default="DATASET-v001", help="Dataset identifier")
+    red_team_run_cmd.add_argument(
         "--offline", action="store_true", help="Run in strict offline mode"
     )
-    validate_run_cmd.add_argument(
+    red_team_run_cmd.add_argument(
         "--output", choices=["text", "json"], default="text", help="Output format"
     )
-    validate_run_cmd.set_defaults(func=run_validate)
+    red_team_run_cmd.set_defaults(func=run_red_team)
 
     return parser
 
