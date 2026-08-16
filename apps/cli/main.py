@@ -10,6 +10,7 @@ from apps.cli.commands.factor import (
     run_factor_list,
     run_factor_research,
 )
+from apps.cli.commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
 from quantlab.application.doctor import DoctorService
 
@@ -227,11 +228,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--offline", action="store_true", help="Run in strict offline mode"
     )
     backtest_run_cmd.add_argument("--start", help="Start date YYYY-MM-DD")
-    backtest_run_cmd.add_argument("--end", help="End date YYYY-MM-DD")
-    backtest_run_cmd.add_argument(
+    backtest_run_cmd.set_defaults(func=run_backtest)
+
+    # Validation subcommand
+    validate_parser = subparsers.add_parser(
+        "validate", help="Validation and overfitting defense commands"
+    )
+    validate_subparsers = validate_parser.add_subparsers(dest="validate_command", required=True)
+
+    validate_run_cmd = validate_subparsers.add_parser(
+        "run", help="Run strategy validation and falsification"
+    )
+    validate_run_cmd.add_argument(
+        "config",
+        help="Path to validation config YAML (e.g. configs/validation/default-v1.yaml)",
+    )
+    validate_run_cmd.add_argument(
+        "--experiment", default="EXP-SYNTHETIC", help="Experiment identifier"
+    )
+    validate_run_cmd.add_argument(
+        "--offline", action="store_true", help="Run in strict offline mode"
+    )
+    validate_run_cmd.add_argument(
         "--output", choices=["text", "json"], default="text", help="Output format"
     )
-    backtest_run_cmd.set_defaults(func=run_backtest)
+    validate_run_cmd.set_defaults(func=run_validate)
 
     return parser
 
