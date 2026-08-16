@@ -1,0 +1,53 @@
+{
+  "champion_model": "ridge",
+  "champion_reason": "Demonstrated incremental out-of-sample Rank IC of 0.9854 vs composite 0.9711",
+  "reports": [
+    {
+      "model_name": "composite",
+      "mean_ic": 0.9711,
+      "ic_std": 0.0168,
+      "ic_ir": 920.27,
+      "top_bottom_spread": 0.04,
+      "quintile_returns": [
+        -0.02,
+        -0.01,
+        0.0,
+        0.01,
+        0.02
+      ],
+      "is_monotonic": true
+    },
+    {
+      "model_name": "ridge",
+      "mean_ic": 0.9854,
+      "ic_std": 0.0062,
+      "ic_ir": 2522.93,
+      "top_bottom_spread": 0.04,
+      "quintile_returns": [
+        -0.02,
+        -0.01,
+        0.0,
+        0.01,
+        0.02
+      ],
+      "is_monotonic": true
+    },
+    {
+      "model_name": "lightgbm",
+      "mean_ic": 0.9618,
+      "ic_std": 0.0139,
+      "ic_ir": 1097.29,
+      "top_bottom_spread": 0.04,
+      "quintile_returns": [
+        -0.02,
+        -0.01,
+        0.0,
+        0.01,
+        0.02
+      ],
+      "is_monotonic": true
+    }
+  ],
+  "n_folds": 5,
+  "content_hash": "59f171198537334f3c97b19a9acb0d3e86317edd4a5c00a5401d052ee09ed40a"
+}
