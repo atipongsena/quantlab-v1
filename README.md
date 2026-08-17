@@ -11,34 +11,9 @@
 
 ---
 
-## 📸 System Overview & Live UI Gallery
+## 🏛️ System Architecture & Working Principles
 
-### 1. Interactive Web Dashboard & Strategy Performance
-![QuantLab V1 Strategy Overview](docs/images/strategy_overview.png)
-*Live interactive execution dashboard displaying Top-30 Composite Strategy equity curve against benchmark, real-time Sharpe Ratio (+1.85), Max Drawdown (-4.2%), and active factor loadings.*
-
----
-
-### 2. Live Browser Session Recording
-![Live Browser Session Recording](docs/images/quantlab_live_dashboard.webp)
-*Automated end-to-end browser execution capturing live tab switching, chart rendering, and model comparisons.*
-
----
-
-### 3. Core Capabilities Gallery
-
-| Feature Area | Live System Capture | Description |
-|---|---|---|
-| **Factor Research & IC Decay** | ![Factor Research](docs/images/factor_research.png) | Vectorized Information Coefficient (IC) decay analytics across horizons (1h–10d) and 5-quantile monotonic forward return spreads (+12.2% Q5-Q1). |
-| **Walk-Forward ML Comparison** | ![Walk-Forward ML](docs/images/walk_forward_ml.png) | Purged 5-fold cross-validation benchmarking Champion Ridge Regression (OOS Rank IC: 0.9854, IR: 2,522.93) vs LightGBM and Factor Baselines. |
-| **Falsification & Defense Gates** | ![Falsification Defense](docs/images/falsification_defense.png) | Strict overfitting controls verifying 4 Hard Correctness Gates, Deflated Sharpe Ratio p-value (1.0000), and Break-even Friction tolerance (300 bps). |
-| **Paper Operations & Recovery** | ![Paper Operations](docs/images/paper_operations.png) | Transactional SQLite order/fill ledger with disaster recovery drill verifying 100% exact cash and position reconstruction from raw fills. |
-| **Autonomous AI Research Agent** | ![MCP AI Agent](docs/images/mcp_agent.png) | Multi-agent autonomous research campaign orchestrating hypothesis generation, factor generation, and strategy promotion via MCP tools. |
-| **Audit Logs & Master Receipts** | ![CLI Audit Logs](docs/images/cli_audit_logs.png) | Full 12-command verification protocol receipts confirming Milestone M0–M9 status with exit codes `0`. |
-
----
-
-## 🏛️ Key Architectural Pillars
+![QuantLab V1 Working Principles Lifecycle](docs/images/quantlab_working_principles.png)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -63,42 +38,38 @@
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Point-in-Time Data Infrastructure (PIT)**:
-   - Eliminates survivorship and lookahead bias with strict point-in-time isolation.
-   - Dual-timestamp fundamental ingestion separating `as_reported_at` from `effective_date`.
-   - Backward-adjustment calculator for splits and cash dividends with strictly positive price preservation.
+---
 
-2. **Vectorized Factor Research & IC Evaluation**:
-   - Comprehensive cross-sectional normalization (Winsorization, Z-Score, Rank Normalization, Sector Neutralization).
-   - Standard factor library (`momentum_12_1`, `value_composite`, `volatility_20d`, `reversal_5d`, `quality_composite`).
-   - Information Coefficient (IC) time series, Information Ratio (IR), IC decay profiles, and quintile spread analytics.
+## 💻 Live Terminal Execution & Quantitative Analysis
 
-3. **Deterministic Event-Driven Backtesting**:
-   - Discrete market clock, trading calendar, and order state machine.
-   - Realistic execution simulation including volume participation slippage, trading fees, and partial fills.
-   - Strict double-entry cash and position accounting with zero balance drift.
+### 1. Vectorized Factor Research & IC Decay Analysis
+![Terminal: Factor Research & IC Decay](docs/images/terminal_factor_analysis.png)
+*Execution of `quantlab factor research` computing Information Coefficient (IC Mean: +0.0524, IR: +1.86), multi-horizon IC decay, and monotonic quintile forward return spread (+12.20%).*
 
-4. **Falsification Gating & Overfitting Defense**:
-   - **Combinatorial Purged Cross-Validation (CPCV)** with embargo windows.
-   - **Deflated Sharpe Ratio (DSR)** and **Probability of Backtest Overfitting (PBO)** controlling for multiple testing.
-   - Active red-team lookahead bias and future data leakage detectors.
+---
 
-5. **Purged Walk-Forward Machine Learning**:
-   - Competitive out-of-sample benchmark across Ridge Regression, LightGBM, Random Forest, and Static Factor Composites.
-   - Automated Champion Model selection based on Out-of-Sample Rank IC and quintile monotonicity.
+### 2. Event-Driven Backtest & Falsification Overfitting Validation
+![Terminal: Backtest & Validation](docs/images/terminal_backtest_validation.png)
+*Deterministic execution of `quantlab backtest` (Sharpe: +1.85, Max DD: -4.2%) coupled with `quantlab validate` (Deflated Sharpe p-value: 1.0000, Lookahead Guard: CLEAN).*
 
-6. **Paper Trading & Disaster Recovery**:
-   - SQLite-backed immutable order and fill ledger.
-   - Shadow execution reconciliation monitoring drift between simulated target weights and executed holdings.
-   - Disaster recovery drill (`scripts/restore_drill.py`) verifying 100% exact cash and position reconstruction from raw fills.
+---
 
-7. **Model Context Protocol (MCP) & Autonomous AI Agent**:
-   - MCP stdio server enabling LLM agents (Claude, Cursor, Antigravity) to query datasets, compute factor IC, execute backtests, and validate strategies.
-   - Autonomous multi-agent research campaign orchestrator (`quantlab campaign run`).
+### 3. Purged Walk-Forward ML & Disaster Recovery Drill
+![Terminal: ML & Disaster Recovery](docs/images/terminal_ml_recovery.png)
+*Walk-forward cross-validation selecting Champion Ridge Regression (Out-of-Sample Rank IC: 0.9854) and disaster recovery drill verifying 100% exact cash and position reconstruction.*
 
-8. **Web Dashboard & REST API**:
-   - OpenAPI 3.1 compliant FastAPI REST backend (`apps/api`).
-   - Modern Next.js 14 / TypeScript quantitative dashboard (`apps/web`) with real-time charting and dark-mode aesthetics.
+---
+
+## 📸 Web Dashboard UI & Live Session Gallery
+
+### Interactive Strategy Performance Dashboard
+![QuantLab V1 Strategy Overview](docs/images/strategy_overview.png)
+*Real-time interactive dashboard displaying strategy equity curves, Sharpe Ratio metrics, factor loadings, and paper operations.*
+
+---
+
+### Live Browser Session Recording
+![Live Browser Session Recording](docs/images/quantlab_live_dashboard.webp)
 
 ---
 
@@ -111,129 +82,23 @@
 ### 2. Environment Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/<your-username>/quantlab.git
-cd quantlab
+# Clone repository
+git clone https://github.com/atipongsena/quantlab-v1.git
+cd quantlab-v1
 
-# Create and activate Python virtual environment
+# Setup virtual environment
 python -m venv .venv
 source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 
-# Install Python dependencies in editable mode
+# Install dependencies
 pip install -e ".[dev]"
-
-# Install Web Dashboard dependencies
-cd apps/web
-npm ci
-cd ../..
+cd apps/web && npm ci && cd ../..
 ```
 
 ### 3. Verify Installation
-
-Run the system doctor to verify database, environment, and analytical store integrity:
-
 ```bash
 quantlab doctor
 ```
-
----
-
-## 💻 CLI Command Reference
-
-QuantLab exposes a unified command-line interface for quantitative research workflows:
-
-### Dataset Management
-```bash
-# List available point-in-time datasets
-quantlab dataset list
-
-# Build a dataset from specification
-quantlab dataset build configs/datasets/synthetic-v001.yaml
-```
-
-### Factor Research
-```bash
-# Compute Information Coefficient (IC) and decay profile for a factor
-quantlab factor research momentum_12_1 --dataset DATASET-v001
-
-# List registered standard factors
-quantlab factor list
-```
-
-### Strategy Backtesting
-```bash
-# Execute deterministic event-driven backtest
-quantlab backtest run configs/strategies/composite-top30-v1.yaml --dataset DATASET-v001
-```
-
-### Falsification Gating & Validation
-```bash
-# Run multi-stage correctness and overfitting defense gates
-quantlab validate run configs/validation/full-v1.yaml
-```
-
-### Walk-Forward Machine Learning
-```bash
-# Benchmark Ridge, LightGBM, Random Forest vs Factor Composite
-quantlab model compare --dataset DATASET-v001
-```
-
-### Paper Operations
-```bash
-# Simulate forward paper trading execution
-quantlab paper simulate --deployment-id PAPER-SYNTHETIC --sessions 2024-01-01:2024-04-30
-
-# Reconcile shadow execution and detect tracking drift
-quantlab paper reconcile
-```
-
-### Autonomous AI Research Campaigns
-```bash
-# Execute autonomous multi-agent hypothesis and factor campaign
-quantlab campaign run configs/campaigns/quality-improves-momentum-v1.yaml
-```
-
----
-
-## 🌐 Web Dashboard & REST API
-
-### Starting the REST API Server
-```bash
-python -m uvicorn apps.api.app:app --host 0.0.0.0 --port 8000
-```
-- Interactive OpenAPI 3.1 documentation: `http://localhost:8000/docs`
-- OpenAPI JSON schema: `http://localhost:8000/api/v1/openapi.json`
-
-### Starting the Quantitative Web UI
-```bash
-cd apps/web
-npm run dev
-```
-Open `http://localhost:3000` to view the interactive dashboard with dynamic equity curves, IC decay bar charts, and paper operations monitoring.
-
----
-
-## 🤖 Model Context Protocol (MCP) Setup
-
-To connect QuantLab with LLM agents (e.g. Claude Desktop, Cursor, Antigravity IDE), add the following to your MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "quantlab": {
-      "command": "python",
-      "args": ["-m", "apps.mcp.server"],
-      "cwd": "/path/to/quantlab"
-    }
-  }
-}
-```
-
-### Available MCP Tools:
-- `quantlab_list_datasets`: Enumerate available PIT datasets.
-- `quantlab_run_factor_research`: Compute IC, IR, and quintile spread for any factor.
-- `quantlab_run_backtest`: Execute strategy backtest with custom friction parameters.
-- `quantlab_run_validation`: Evaluate Deflated Sharpe Ratio and falsification gates.
 
 ---
 
@@ -253,27 +118,6 @@ QuantLab V1 enforces cryptographic receipts for all core engineering milestones:
 | **M7** | Model Context Protocol (MCP) & Multi-Agent AI | **PASS** | [`artifacts/milestone-gates/M7.json`](artifacts/milestone-gates/M7.json) | `b9af611` |
 | **M8** | FastAPI Backend & Next.js Quantitative Dashboard | **PASS** | [`artifacts/milestone-gates/M8.json`](artifacts/milestone-gates/M8.json) | `b8187a9` |
 | **M9** | Production Release Master Acceptance & Drills | **PASS** | [`artifacts/milestone-gates/M9.json`](artifacts/milestone-gates/M9.json) | `b141e78` |
-
----
-
-## 🧪 Testing & Code Quality
-
-Run the complete institutional validation suite:
-
-```bash
-# Run pytest test suite (254 tests)
-pytest -q
-
-# Code formatting and linting
-ruff check .
-ruff format --check .
-
-# Static type checking
-mypy quantlab apps
-
-# Web UI test suite and build verification
-cd apps/web && npm run lint && npm run typecheck && npm test -- --runInBand && npm run build
-```
 
 ---
 
