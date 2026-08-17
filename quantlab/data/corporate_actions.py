@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Protocol
 
 from quantlab.domain.corporate_actions import CorporateAction, CorporateActionType
@@ -173,11 +173,11 @@ def apply_adjustments(
 
     for bar in sorted(bars, key=lambda b: b.session):
         p_fac, v_fac = factors.get(bar.session, (Decimal("1"), Decimal("1")))
-        adj_open = max((bar.open * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
-        adj_high = max((bar.high * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
-        adj_low = max((bar.low * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
-        adj_close = max((bar.close * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
-        adj_vol = max((bar.volume * v_fac).quantize(Decimal("0.0001")), Decimal("0.0001"))
+        adj_open = max(Decimal(f"{bar.open * p_fac:.6f}"), Decimal("0.000001"))
+        adj_high = max(Decimal(f"{bar.high * p_fac:.6f}"), Decimal("0.000001"))
+        adj_low = max(Decimal(f"{bar.low * p_fac:.6f}"), Decimal("0.000001"))
+        adj_close = max(Decimal(f"{bar.close * p_fac:.6f}"), Decimal("0.000001"))
+        adj_vol = max(Decimal(f"{bar.volume * v_fac:.4f}"), Decimal("0.0001"))
 
         # Safety clamp to guarantee high >= max(open, low, close) and low <= min(...)
         adj_high = max(adj_high, adj_open, adj_low, adj_close)
