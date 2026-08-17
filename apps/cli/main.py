@@ -4,22 +4,22 @@ import argparse
 import sys
 from collections.abc import Sequence
 
-from apps.cli.commands.backtest import run_backtest
-from apps.cli.commands.campaign import run_campaign_run
-from apps.cli.commands.factor import (
+from .commands.backtest import run_backtest
+from .commands.campaign import run_campaign_run
+from .commands.factor import (
     run_factor_composite,
     run_factor_list,
     run_factor_research,
 )
-from apps.cli.commands.model import run_model_compare
-from apps.cli.commands.paper import (
+from .commands.model import run_model_compare
+from .commands.paper import (
     run_paper_reconcile,
     run_paper_run,
     run_paper_simulate,
 )
-from apps.cli.commands.red_team import run_red_team
-from apps.cli.commands.report import run_report_verify
-from apps.cli.commands.validation import run_validate
+from .commands.red_team import run_red_team
+from .commands.report import run_report_verify
+from .commands.validation import run_validate
 from quantlab.application.dataset_service import DatasetService
 from quantlab.application.doctor import DoctorService
 

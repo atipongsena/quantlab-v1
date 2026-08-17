@@ -19,8 +19,10 @@ class JSONRPCRequest:
         if data.get("jsonrpc") != "2.0":
             raise ValueError("Invalid JSON-RPC version; must be '2.0'")
         method = str(data.get("method", ""))
-        params = dict(data.get("params", {})) if isinstance(data.get("params"), dict) else {}
-        req_id = data.get("id")  # type: ignore[assignment]
+        raw_params = data.get("params")
+        params: dict[str, object] = dict(raw_params) if isinstance(raw_params, Mapping) else {}
+        raw_id = data.get("id")
+        req_id: str | int | None = str(raw_id) if isinstance(raw_id, (str, int)) else None
         return cls(method=method, params=params, id=req_id)
 
 

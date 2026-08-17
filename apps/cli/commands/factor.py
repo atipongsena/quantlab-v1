@@ -24,7 +24,7 @@ def run_factor_list(args: argparse.Namespace) -> int:
     for f in factors:
         direction_str = "+1 (Long High)" if f["direction"] == 1 else "-1 (Long Low)"
         print(f"Factor ID   : {f['factor_id']} (v{f['version']})")
-        print(f"Name        : {f['name']} [{f['category'].upper()}]")
+        print(f"Name        : {f['name']} [{str(f['category']).upper()}]")
         print(f"Formula     : {f['formula']}")
         print(f"Direction   : {direction_str} | Lookback: {f['lookback_sessions']} sessions")
         print(f"Description : {f['description']}")

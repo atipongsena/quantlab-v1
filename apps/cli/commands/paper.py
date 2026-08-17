@@ -65,7 +65,7 @@ def run_paper_reconcile(args: argparse.Namespace) -> int:
     print(f"Clean Status     : {'CLEAN' if res['is_clean'] else 'BREAKS DETECTED'}")
     print(f"Max Severity     : {res['max_severity']}")
     print(f"Breaks Count     : {len(res.get('breaks', []))}")  # type: ignore[arg-type]
-    print(f"Content Hash     : {res['content_hash'][:16]}...")
+    print(f"Content Hash     : {str(res.get('content_hash', ''))[:16]}...")
     print("=" * 70)
     print("Status: PASS [Reconciliation completed successfully]")
     return 0

@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 
-from apps.mcp.tools import MCPTool, get_default_tools
-from apps.mcp.transport import JSONRPCRequest, JSONRPCResponse
+from .tools import MCPTool, get_default_tools
+from .transport import JSONRPCRequest, JSONRPCResponse
 
 
 class MCPServer:
@@ -32,8 +32,12 @@ class MCPServer:
         try:
             req = JSONRPCRequest.from_dict(data)
         except Exception as e:
+            raw_err_id = data.get("id") if isinstance(data, dict) else None
+            err_id: str | int | None = (
+                str(raw_err_id) if isinstance(raw_err_id, (str, int)) else None
+            )
             return JSONRPCResponse(
-                id=data.get("id") if isinstance(data, dict) else None,  # type: ignore[arg-type]
+                id=err_id,
                 error={"code": -32600, "message": f"Invalid Request: {e}"},
             ).to_json()
 

@@ -68,21 +68,21 @@ class QuantLabAPI:
             }
 
         if path == "/api/v1/models/compare":
-            res = self.model_service.compare_models()
-            return 200, res.as_dict()
+            model_res = self.model_service.compare_models()
+            return 200, model_res.as_dict()
 
         if path == "/api/v1/paper/run" and method_upper == "POST":
-            res = self.paper_service.run_daily_cycle(date(2026, 1, 5))
-            return 200, res
+            paper_res = self.paper_service.run_daily_cycle(date(2026, 1, 5))
+            return 200, paper_res
 
         if path == "/api/v1/paper/reconcile" and method_upper == "POST":
-            res = self.paper_service.reconcile_daily(date(2026, 1, 5))
-            return 200, res
+            reconcile_res = self.paper_service.reconcile_daily(date(2026, 1, 5))
+            return 200, reconcile_res
 
         if path == "/api/v1/campaigns/run" and method_upper == "POST":
             cfg_path = self.base_dir / "configs/campaigns/quality-improves-momentum-v1.yaml"
-            res = self.research_service.run_campaign(cfg_path)
-            return 200, res.as_dict()
+            camp_res = self.research_service.run_campaign(cfg_path)
+            return 200, camp_res.as_dict()
 
         if path == "/api/v1/openapi.json":
             spec = generate_openapi_spec(self.base_dir)

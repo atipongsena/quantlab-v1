@@ -1,0 +1,11 @@
+release_id: "quantlab-v1"
+version: "1.0.0"
+title: "QuantLab V1 Production Release"
+target_dataset: "DATASET-v001"
+target_fixture: "synthetic_v1"
+strategy_config: "configs/strategies/composite-top30-v1.yaml"
+validation_gates:
+  lookahead_leakage_clean: true
+  min_dsr: 0.80
+  sensitivity_topology: "PLATEAU"
+  max_break_severity: "NONE"
