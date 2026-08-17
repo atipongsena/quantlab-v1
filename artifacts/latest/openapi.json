@@ -1,0 +1,395 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "QuantLab Research & Trading API",
+    "version": "1.0.0",
+    "description": "Production quantitative research, validation, and paper execution API"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "System Health Check",
+        "responses": {
+          "200": {
+            "description": "System status OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets": {
+      "get": {
+        "summary": "List Available Datasets",
+        "responses": {
+          "200": {
+            "description": "List of point-in-time datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/factors/research": {
+      "post": {
+        "summary": "Run Factor Research Tear Sheet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactorResearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Factor research results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactorResearchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/backtest": {
+      "post": {
+        "summary": "Execute Strategy Backtest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BacktestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Backtest metrics and equity curve",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/validation": {
+      "post": {
+        "summary": "Run Correctness and Robustness Validation",
+        "responses": {
+          "200": {
+            "description": "Validation verdict and gate results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/compare": {
+      "get": {
+        "summary": "Walk-Forward Model Comparison",
+        "responses": {
+          "200": {
+            "description": "Model comparison and champion selection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelComparisonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper/run": {
+      "post": {
+        "summary": "Run Daily Paper Execution Cycle",
+        "responses": {
+          "200": {
+            "description": "Paper run execution summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paper/reconcile": {
+      "post": {
+        "summary": "Reconcile Shadow Ledger with Broker",
+        "responses": {
+          "200": {
+            "description": "Reconciliation break report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/campaigns/run": {
+      "post": {
+        "summary": "Run Autonomous Multi-Agent Research Campaign",
+        "responses": {
+          "200": {
+            "description": "Research campaign report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ]
+      },
+      "DatasetListResponse": {
+        "type": "object",
+        "properties": {
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dataset_id": {
+                  "type": "string"
+                },
+                "instruments_count": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "datasets"
+        ]
+      },
+      "FactorResearchRequest": {
+        "type": "object",
+        "properties": {
+          "factor_name": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "factor_name"
+        ]
+      },
+      "FactorResearchResponse": {
+        "type": "object",
+        "properties": {
+          "factor_name": {
+            "type": "string"
+          },
+          "mean_ic": {
+            "type": "number"
+          },
+          "ic_ir": {
+            "type": "number"
+          },
+          "annualized_return": {
+            "type": "number"
+          },
+          "sharpe_ratio": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "factor_name",
+          "mean_ic",
+          "ic_ir"
+        ]
+      },
+      "BacktestRequest": {
+        "type": "object",
+        "properties": {
+          "strategy_config": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "type": "string"
+          }
+        }
+      },
+      "BacktestResponse": {
+        "type": "object",
+        "properties": {
+          "annualized_return": {
+            "type": "number"
+          },
+          "sharpe_ratio": {
+            "type": "number"
+          },
+          "max_drawdown": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "annualized_return",
+          "sharpe_ratio",
+          "max_drawdown"
+        ]
+      },
+      "ValidationResponse": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string"
+          },
+          "lookahead_leakage_clean": {
+            "type": "boolean"
+          },
+          "data_integrity_passed": {
+            "type": "boolean"
+          },
+          "reproducibility_verified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "ModelComparisonResponse": {
+        "type": "object",
+        "properties": {
+          "champion_model": {
+            "type": "string"
+          },
+          "champion_reason": {
+            "type": "string"
+          },
+          "reports": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "champion_model",
+          "reports"
+        ]
+      },
+      "PaperRunResponse": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "string"
+          },
+          "orders_count": {
+            "type": "integer"
+          },
+          "fills_count": {
+            "type": "integer"
+          },
+          "total_equity": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session",
+          "orders_count",
+          "total_equity"
+        ]
+      },
+      "ReconciliationResponse": {
+        "type": "object",
+        "properties": {
+          "is_clean": {
+            "type": "boolean"
+          },
+          "max_severity": {
+            "type": "string"
+          },
+          "breaks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "is_clean",
+          "max_severity"
+        ]
+      },
+      "CampaignResponse": {
+        "type": "object",
+        "properties": {
+          "report_id": {
+            "type": "string"
+          },
+          "campaign_id": {
+            "type": "string"
+          },
+          "verdicts": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "report_id",
+          "campaign_id"
+        ]
+      }
+    }
+  }
+}
