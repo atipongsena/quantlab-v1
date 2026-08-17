@@ -4,6 +4,9 @@ import argparse
 import sys
 from collections.abc import Sequence
 
+from quantlab.application.dataset_service import DatasetService
+from quantlab.application.doctor import DoctorService
+
 from .commands.backtest import run_backtest
 from .commands.campaign import run_campaign_run
 from .commands.factor import (
@@ -20,8 +23,6 @@ from .commands.paper import (
 from .commands.red_team import run_red_team
 from .commands.report import run_report_verify
 from .commands.validation import run_validate
-from quantlab.application.dataset_service import DatasetService
-from quantlab.application.doctor import DoctorService
 
 
 def run_doctor(args: argparse.Namespace) -> int:

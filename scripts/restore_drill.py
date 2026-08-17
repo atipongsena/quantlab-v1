@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import sys
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-import sys
-import uuid
 
 from quantlab.domain.identity import InstrumentId
 from quantlab.paper.contracts import PaperFill, PaperOrderSide

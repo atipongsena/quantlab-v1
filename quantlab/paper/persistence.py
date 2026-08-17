@@ -99,7 +99,9 @@ class PaperStateStore:
                 for inst, qty in account.positions.items():
                     conn.execute(
                         """
-                        INSERT INTO paper_positions (account_id, instrument_id, quantity, updated_at)
+                        INSERT INTO paper_positions (
+                            account_id, instrument_id, quantity, updated_at
+                        )
                         VALUES (?, ?, ?, ?)
                         """,
                         (account.account_id, str(inst.value), str(qty), now_str),
@@ -143,7 +145,8 @@ class PaperStateStore:
                 conn.execute(
                     """
                     INSERT INTO paper_fills (
-                        fill_id, order_id, instrument_id, side, quantity, price, commission, filled_at
+                        fill_id, order_id, instrument_id, side,
+                        quantity, price, commission, filled_at
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(fill_id) DO NOTHING
