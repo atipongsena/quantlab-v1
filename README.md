@@ -39,6 +39,98 @@
 
 ---
 
+## 🔬 Detailed Subsystem Workflows & Verification Checks Matrix
+
+QuantLab V1 enforces strict mathematical, statistical, and engineering verification checks across every module of the quantitative lifecycle:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     QuantLab Verification Guards                                     │
+├─────────────────────────┬───────────────────────────┬────────────────────────────────────────────────┤
+│ Subsystem / Module      │ How It Works (Workflow)   │ Automated Verification Checks & Gates          │
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 1. Point-in-Time Store  │ Ingests EOD bars, dual-   │ • Lookahead Guard: observed_at <= as_of filter │
+│    (DuckDB + Parquet)   │ timestamp fundamentals,   │ • Corporate Action Guard: Price > 0.000001     │
+│                         │ & corporate action events │ • Survivorship Guard: Retains delisted symbols │
+│                         │                           │ • Partition Ref Hash: SHA-256 immutability     │
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 2. Factor Research      │ Vectorized cross-section  │ • Pearson & Spearman Rank IC significance      │
+│    (Alpha Engine)       │ Z-Score normalization and │ • IC Decay Monotonicity (1M -> 12M smooth)     │
+│                         │ forward return generation │ • Quantile Spread Check (Q5 > Q4 > Q3 > Q2 > Q1)│
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 3. Event-Driven         │ Discrete clock execution, │ • Double-Entry Conservation (Zero Drift)       │
+│    Backtest Engine      │ order state machine, fee  │ • Short/Margin Constraint Guard                │
+│                         │ & slippage simulation     │ • Deterministic Bit-for-Bit Seed Replay        │
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 4. Falsification Gate   │ Multi-stage correctness & │ • Deflated Sharpe Ratio (DSR p-value > 0.95)   │
+│    (Overfitting Guard)  │ statistical overfitting   │ • Probability of Backtest Overfit (PBO < 1%)   │
+│                         │ falsifier                 │ • Friction Stress Test (Robust up to 240+ bps) │
+│                         │                           │ • Active Red-Team Future Data Leakage Guard    │
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 5. Walk-Forward ML      │ Purged cross-validation   │ • Combinatorial Purged Folds + 21-Day Embargo  │
+│    (AI Model Selection) │ training Ridge, LightGBM, │ • Out-of-Sample Rank IC Dominance vs Baseline  │
+│                         │ and Random Forest models  │ • Generalization Monotonicity Verification     │
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 6. Paper Operations     │ Real-time simulated order │ • Shadow Execution Reconciler (Drift < 1.0%)   │
+│    (Fill Ledger Store)  │ routing & SQLite ledger   │ • Disaster Recovery Fill Replay Drill (100.0%) │
+├─────────────────────────┼───────────────────────────┼────────────────────────────────────────────────┤
+│ 7. MCP Multi-Agent AI   │ Exposes tools to LLMs via │ • Pydantic Schema Validation on Tool Inputs    │
+│    (Research Campaign)  │ Model Context Protocol    │ • Offline Socket Guard (Anti-Exfiltration)     │
+│                         │ for autonomous discovery  │ • Cryptographic SHA-256 Campaign Signing       │
+└─────────────────────────┴───────────────────────────┴────────────────────────────────────────────────┘
+```
+
+### Module 1: Point-in-Time Data Infrastructure (PIT)
+- **Workflow**: Ingests raw market bars, dual-timestamp fundamental reports (`period_end` vs `filing_date` / `available_at`), and corporate action events (stock splits and cash dividends) into columnar Parquet/DuckDB stores.
+- **Verification Checks**:
+  1. **Lookahead Guard**: Enforces strict point-in-time isolation by asserting that no bar or fundamental filing timestamped `> as_of` is ever exposed to the strategy.
+  2. **Corporate Action Price Clamping**: Computes backward split/dividend adjustments while guaranteeing all adjusted OHLC prices remain strictly positive ($\ge \$0.000001$) and high/low bounds are maintained ($H \ge \max(O, L, C)$ and $L \le \min(O, H, C)$).
+  3. **Survivorship Bias Defense**: Explicitly tracks historical delistings and corporate mergers, preventing survivorship filtering.
+  4. **Parquet Partition Immutability**: Verifies row counts and SHA-256 partition content hashes.
+
+### Module 2: Factor Research & Statistical Alpha Engine
+- **Workflow**: Performs cross-sectional Winsorization, Z-score normalization, and sector neutralization across the investment universe, generating forward returns across 1M, 3M, 6M, and 12M horizons.
+- **Verification Checks**:
+  1. **Information Coefficient (IC) & t-Statistic**: Calculates Pearson and Spearman Rank IC along with the Information Ratio ($\text{IR} = \mu_{\text{IC}} / \sigma_{\text{IC}}$) and Student's t-statistic ($t = \text{IR} \times \sqrt{N}$) to prove statistical significance ($p < 0.05$).
+  2. **IC Decay Monotonicity**: Verifies that predictive alpha decays smoothly over time ($1\text{M} \ge 3\text{M} \ge 6\text{M} \ge 12\text{M}$) without erratic polarity flips.
+  3. **Quantile Spread & Monotonicity**: Evaluates 5-quantile forward returns to verify that Top-20% Alpha (Q5) systematically outperforms Bottom-20% (Q1).
+
+### Module 3: Deterministic Event-Driven Backtesting
+- **Workflow**: Executes trades through a discrete market clock and order state machine (`PENDING` $\rightarrow$ `SUBMITTED` $\rightarrow$ `PARTIALLY_FILLED` $\rightarrow$ `FILLED` / `CANCELED`), simulating volume-participation slippage and brokerage fees.
+- **Verification Checks**:
+  1. **Double-Entry Accounting Invariant**: Mathematically verifies that cash balance, positions, dividends, and commissions are conserved with zero balance drift ($\Delta = 0.000000$).
+  2. **Margin & Short Constraints**: Enforces realistic leverage and short borrow constraints.
+  3. **Deterministic Bit-for-Bit Replayability**: Verifies that running the same backtest configuration with the same seed produces 100% identical trades and equity curves across different runs.
+
+### Module 4: Falsification Gating & Overfitting Defense
+- **Workflow**: Evaluates candidate strategies against a battery of red-team correctness and overfitting defense gates before certifying them for paper deployment.
+- **Verification Checks**:
+  1. **Deflated Sharpe Ratio (DSR)**: Corrects the estimated Sharpe ratio for multiple testing trials ($N$), non-normal skewness, and fat-tailed kurtosis (Bailey & Lopez de Prado standard), requiring $p_{\text{DSR}} \ge 0.95$.
+  2. **Probability of Backtest Overfit (PBO)**: Uses Combinatorial Purged Cross-Validation (CPCV) to compute the probability that the best in-sample strategy underperforms median out-of-sample ($PBO < 0.01$).
+  3. **Break-even Friction Stress Test**: Stresses transaction costs up to 300 bps to ensure strategy profitability survives real-world market frictions.
+  4. **Active Red-Team Data Leakage Guard**: Injects forward lookahead perturbations to verify that any data leakage triggers an immediate hard `FAIL`.
+
+### Module 5: Purged Walk-Forward Machine Learning
+- **Workflow**: Benchmarks Ridge Regression (L2), LightGBM Gradient Boosting, Random Forest, and Static Factor Composites across rolling time splits.
+- **Verification Checks**:
+  1. **Purging & 21-Day Embargo Windows**: Purges overlapping training and test sessions and imposes a 21-session embargo window to eliminate serial correlation leakage.
+  2. **Out-of-Sample Rank IC Dominance**: Selects the Champion Model based on out-of-sample Rank IC generalization and quintile monotonicity.
+
+### Module 6: Paper Operations & Disaster Recovery
+- **Workflow**: Simulates live forward execution by recording orders and fills into an immutable transactional SQLite ledger.
+- **Verification Checks**:
+  1. **Shadow Execution Reconciliation**: Continuously monitors drift between target portfolio weights and executed holdings, flagging alerts if tracking error exceeds $1.0\%$.
+  2. **Disaster Recovery Fill Replay Drill**: Simulates catastrophic memory loss by wiping active state and reconstructing exact cash balances and share holdings solely from raw immutable fill records ($100.0\%$ precision).
+
+### Module 7: Model Context Protocol (MCP) AI Research Campaigns
+- **Workflow**: Exposes the complete quantitative platform to LLM agents (Claude Desktop, Cursor, Antigravity IDE) via standard MCP stdio protocol for autonomous hypothesis formulation and testing.
+- **Verification Checks**:
+  1. **Strict Tool Input Validation**: Validates all parameters via Pydantic schemas before execution.
+  2. **Offline Socket Guard**: Restricts execution to authorized analytical APIs and local databases, blocking unauthorized data exfiltration.
+  3. **Cryptographic Campaign Receipts**: Hashes and signs research artifacts with SHA-256 signatures.
+
+---
+
 ## 💻 Real Terminal Execution & Out-of-Sample Market Analytics
 
 QuantLab V1 has been evaluated across **5 years of real daily market data (2020–2024, 1,257 sessions)** across 16 real US Megacap equities and ETFs (`AAPL`, `MSFT`, `GOOGL`, `AMZN`, `META`, `NVDA`, `TSLA`, `JPM`, `V`, `UNH`, `PG`, `XOM`, `JNJ`, `HD`, `SPY`, `QQQ`):
