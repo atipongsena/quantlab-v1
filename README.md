@@ -7,7 +7,7 @@
 [![Milestone Gates](https://img.shields.io/badge/Milestone%20Gates-M0--M9%20PASS%20(10%2F10)-brightgreen.svg)](artifacts/milestone-gates/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-**QuantLab V1** is an institutional-grade, point-in-time quantitative research, deterministic event-driven backtesting, falsification gating, purged walk-forward machine learning, real-time paper trading, and Model Context Protocol (MCP) multi-agent quantitative operating system.
+**QuantLab V1** is an point-in-time quantitative research, deterministic event-driven backtesting, falsification gating, purged walk-forward machine learning, real-time paper trading, and Model Context Protocol (MCP) multi-agent quantitative operating system.
 
 ---
 
