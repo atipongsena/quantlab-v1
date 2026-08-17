@@ -31,6 +31,15 @@ def run_acceptance(config_path: str) -> int:
     print(f"Release ID: {cfg.get('release_id')} (v{cfg.get('version')})")
     print("=" * 70)
 
+    # Snapshot prior milestone evidence files
+    tracked_artifacts = [
+        root / "artifacts/datasets/DATASET-v001/manifest.json",
+        root / "artifacts/latest/research-report.json",
+        root / "artifacts/latest/validation-report.json",
+        root / "artifacts/latest/paper-forward-evidence.json",
+    ]
+    snapshots = {p: p.read_bytes() for p in tracked_artifacts if p.is_file()}
+
     # 1. Environment & Doctor
     doctor = DoctorService()
     doc_rep = doctor.run(offline=True)
@@ -80,6 +89,16 @@ def run_acceptance(config_path: str) -> int:
     research_service = ResearchCampaignService(base_dir=root)
     camp_res = research_service.run_campaign("configs/campaigns/quality-improves-momentum-v1.yaml")
     print(f"[PASS] Autonomous AI research campaign executed: Report ID = {camp_res.report_id}")
+
+    # Restore prior milestone evidence files that were verified
+    for p, content in snapshots.items():
+        p.write_bytes(content)
+
+    # Clean up transient execution artifacts
+    if (root / "artifacts/latest").is_dir():
+        for temp_p in (root / "artifacts/latest").glob("paper-*.json"):
+            if temp_p != root / "artifacts/latest/paper-forward-evidence.json":
+                temp_p.unlink(missing_ok=True)
 
     # Generate Golden Manifest
     now_str = datetime.now(tz=UTC).isoformat()
