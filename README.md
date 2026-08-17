@@ -13,7 +13,6 @@
 
 ## 🏛️ System Architecture & Working Principles
 
-![QuantLab V1 Working Principles Lifecycle](docs/images/quantlab_working_principles.png)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -85,11 +84,6 @@ QuantLab V1 has been evaluated across **5 years of real daily market data (2020�
 ![Strategy Performance UI](docs/images/strategy_overview.png)
 *Interactive Next.js 14 quantitative dashboard showing Top-5 US Megacap Momentum strategy performance (+126.32% Total Return, +0.91 Sharpe, $2,263,200 NAV) against SPY benchmark.*
 
----
-
-### 2. Live Browser Session Recording
-![Live Browser Session Recording](docs/images/quantlab_live_dashboard.webp)
-*Automated end-to-end browser execution capturing live tab switching, chart rendering, and model comparisons.*
 
 ---
 
