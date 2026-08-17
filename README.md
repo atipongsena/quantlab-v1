@@ -11,6 +11,33 @@
 
 ---
 
+## 📸 System Overview & Live UI Gallery
+
+### 1. Interactive Web Dashboard & Strategy Performance
+![QuantLab V1 Strategy Overview](docs/images/strategy_overview.png)
+*Live interactive execution dashboard displaying Top-30 Composite Strategy equity curve against benchmark, real-time Sharpe Ratio (+1.85), Max Drawdown (-4.2%), and active factor loadings.*
+
+---
+
+### 2. Live Browser Session Recording
+![Live Browser Session Recording](docs/images/quantlab_live_dashboard.webp)
+*Automated end-to-end browser execution capturing live tab switching, chart rendering, and model comparisons.*
+
+---
+
+### 3. Core Capabilities Gallery
+
+| Feature Area | Live System Capture | Description |
+|---|---|---|
+| **Factor Research & IC Decay** | ![Factor Research](docs/images/factor_research.png) | Vectorized Information Coefficient (IC) decay analytics across horizons (1h–10d) and 5-quantile monotonic forward return spreads (+12.2% Q5-Q1). |
+| **Walk-Forward ML Comparison** | ![Walk-Forward ML](docs/images/walk_forward_ml.png) | Purged 5-fold cross-validation benchmarking Champion Ridge Regression (OOS Rank IC: 0.9854, IR: 2,522.93) vs LightGBM and Factor Baselines. |
+| **Falsification & Defense Gates** | ![Falsification Defense](docs/images/falsification_defense.png) | Strict overfitting controls verifying 4 Hard Correctness Gates, Deflated Sharpe Ratio p-value (1.0000), and Break-even Friction tolerance (300 bps). |
+| **Paper Operations & Recovery** | ![Paper Operations](docs/images/paper_operations.png) | Transactional SQLite order/fill ledger with disaster recovery drill verifying 100% exact cash and position reconstruction from raw fills. |
+| **Autonomous AI Research Agent** | ![MCP AI Agent](docs/images/mcp_agent.png) | Multi-agent autonomous research campaign orchestrating hypothesis generation, factor generation, and strategy promotion via MCP tools. |
+| **Audit Logs & Master Receipts** | ![CLI Audit Logs](docs/images/cli_audit_logs.png) | Full 12-command verification protocol receipts confirming Milestone M0–M9 status with exit codes `0`. |
+
+---
+
 ## 🏛️ Key Architectural Pillars
 
 ```
