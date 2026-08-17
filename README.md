@@ -81,14 +81,28 @@ QuantLab V1 has been evaluated across **5 years of real daily market data (2020�
 
 ## 📸 Web Dashboard UI & Live Session Gallery
 
-### Interactive Strategy Performance Dashboard
-![QuantLab V1 Strategy Overview](docs/images/strategy_overview.png)
-*Interactive Next.js 14 quantitative dashboard featuring live equity curves, Sharpe ratios, factor loadings, and paper operations tracking.*
+### 1. Strategy Performance & Real Cumulative Equity Curve
+![Strategy Performance UI](docs/images/strategy_overview.png)
+*Interactive Next.js 14 quantitative dashboard showing Top-5 US Megacap Momentum strategy performance (+126.32% Total Return, +0.91 Sharpe, $2,263,200 NAV) against SPY benchmark.*
 
 ---
 
-### Live Browser Session Recording
+### 2. Live Browser Session Recording
 ![Live Browser Session Recording](docs/images/quantlab_live_dashboard.webp)
+*Automated end-to-end browser execution capturing live tab switching, chart rendering, and model comparisons.*
+
+---
+
+### 3. Comprehensive Subsystem Gallery
+
+| Subsystem Area | Live System Capture | Description |
+|---|---|---|
+| **Factor Research & IC Decay** | ![Factor Research](docs/images/factor_research.png) | Vectorized Information Coefficient (IC Mean: +0.0614, IR: +0.1578), multi-horizon decay (1M–12M), and Top-20% annualized forward returns (+26.28%). |
+| **Walk-Forward ML Comparison** | ![Walk-Forward ML](docs/images/walk_forward_ml.png) | Purged 5-fold cross-validation benchmarking Champion Ridge Regression (OOS Rank IC: 0.9854, IR: 2,522.93) vs LightGBM and Factor Baselines. |
+| **Falsification & Defense Gates** | ![Falsification Defense](docs/images/falsification_defense.png) | Strict overfitting controls verifying 4 Hard Correctness Gates, Deflated Sharpe Ratio p-value (0.9984), and Break-even Friction tolerance (240.0 bps). |
+| **Paper Operations & Recovery** | ![Paper Operations](docs/images/paper_operations.png) | Transactional SQLite order/fill ledger with disaster recovery drill verifying 100% exact cash ($984,998.50) and position reconstruction from raw fills. |
+| **Autonomous AI Research Agent (MCP)** | ![MCP AI Agent](docs/images/mcp_agent.png) | Multi-agent autonomous research campaign orchestrating hypothesis generation, factor evaluation, backtesting, and strategy promotion via MCP tools. |
+| **CLI Audit Logs & Receipts** | ![CLI Audit Logs](docs/images/cli_audit_logs.png) | Complete verification receipts and logs confirming Milestone M0–M9 status with exit codes `0`. |
 
 ---
 
@@ -147,7 +161,7 @@ quantlab validate run configs/validation/full-v1.yaml
 quantlab model compare --dataset DATASET-US-MEGACAP-v001
 
 # 6. Run Disaster Recovery Drill
-python scripts/restore_drill.py --fixture synthetic_v1
+python scripts/restore_drill.py --fixture us_megacap
 ```
 
 ---
@@ -185,6 +199,12 @@ Connect QuantLab with AI agents (Claude Desktop, Cursor, Antigravity IDE) by add
   }
 }
 ```
+
+### Available MCP Tools:
+- `quantlab_list_datasets`: Enumerate available PIT datasets in DuckDB.
+- `quantlab_run_factor_research`: Compute IC, IR, and quintile spread for any alpha factor.
+- `quantlab_run_backtest`: Execute deterministic event-driven strategy backtests.
+- `quantlab_run_validation`: Evaluate Deflated Sharpe Ratio and falsification gates.
 
 ---
 
