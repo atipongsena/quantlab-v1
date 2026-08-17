@@ -179,7 +179,7 @@ QuantLab V1 has been evaluated across **5 years of real daily market data (2020â
 
 ---
 
-### 3. Comprehensive Subsystem Gallery
+### 2. Comprehensive Subsystem Gallery
 
 | Subsystem Area | Live System Capture | Description |
 |---|---|---|
