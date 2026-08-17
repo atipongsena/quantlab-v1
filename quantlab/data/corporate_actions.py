@@ -173,11 +173,11 @@ def apply_adjustments(
 
     for bar in sorted(bars, key=lambda b: b.session):
         p_fac, v_fac = factors.get(bar.session, (Decimal("1"), Decimal("1")))
-        adj_open = (bar.open * p_fac).quantize(Decimal("0.000001"))
-        adj_high = (bar.high * p_fac).quantize(Decimal("0.000001"))
-        adj_low = (bar.low * p_fac).quantize(Decimal("0.000001"))
-        adj_close = (bar.close * p_fac).quantize(Decimal("0.000001"))
-        adj_vol = (bar.volume * v_fac).quantize(Decimal("0.0001"))
+        adj_open = max((bar.open * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
+        adj_high = max((bar.high * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
+        adj_low = max((bar.low * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
+        adj_close = max((bar.close * p_fac).quantize(Decimal("0.000001")), Decimal("0.000001"))
+        adj_vol = max((bar.volume * v_fac).quantize(Decimal("0.0001")), Decimal("0.0001"))
 
         # Safety clamp to guarantee high >= max(open, low, close) and low <= min(...)
         adj_high = max(adj_high, adj_open, adj_low, adj_close)
