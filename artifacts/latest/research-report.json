@@ -1,7 +1,7 @@
 {
   "report_id": "REP-quality-improves-momentum-v1",
   "campaign_id": "quality-improves-momentum-v1",
-  "generated_at": "2026-08-16T21:05:59.551414+00:00",
+  "generated_at": "2026-08-19T09:29:41.910236+00:00",
   "hypotheses_count": 1,
   "verdicts": {
     "HYP-001": "VALIDATED"
@@ -55,5 +55,5 @@
       }
     ]
   },
-  "content_hash": "0cfd1aeef538a8f2246ec3926c4d23fff241bf81eea2e4e41242d77f1ab48f3f"
+  "content_hash": "9346707dc30d42c6d09726b0170b793fdb4db1b9c8158695803a6086e87715b7"
 }

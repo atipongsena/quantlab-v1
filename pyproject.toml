@@ -5,10 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "quantlab"
 version = "0.1.0"
-description = "Reproducible quantitative research foundations."
+description = "Point-in-time quantitative research, event-driven backtesting, and falsification gates."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+
+# The research engine itself has no third-party runtime dependencies beyond a YAML
+# parser. Statistics, linear algebra, and the tree learner are implemented in this
+# repository, which is what makes the numbers traceable and the runs reproducible
+# without pinning a scientific stack. Optional extras cover the things that genuinely
+# need a library: fetching market data, and serving the dashboard API.
+dependencies = [
+    "PyYAML>=6,<7",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -16,6 +24,14 @@ dev = [
     "pre-commit>=4,<5",
     "pytest>=8,<10",
     "ruff>=0.8,<1",
+]
+data = [
+    "yfinance>=0.2.55",
+    "pandas>=2.2",
+]
+api = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
 ]
 
 [project.scripts]
@@ -31,7 +47,7 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = ["docs", ".superpowers"]
+extend-exclude = ["docs", ".superpowers", "apps/web"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
@@ -40,3 +56,8 @@ select = ["E", "F", "I", "UP"]
 python_version = "3.12"
 strict = true
 warn_unused_configs = true
+# apps/ is a namespace package with no __init__.py at its root, so without an explicit
+# base mypy resolves apps/api/artifacts.py as both `api.artifacts` and `apps.api.artifacts`
+# and refuses to continue.
+explicit_package_bases = true
+mypy_path = "."

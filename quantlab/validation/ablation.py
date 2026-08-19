@@ -13,6 +13,14 @@ class AblationRecord:
     cagr: float
     marginal_contribution_sharpe: float
 
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "omitted_factor": self.omitted_factor,
+            "sharpe_ratio": round(self.sharpe_ratio, 4),
+            "cagr": round(self.cagr, 6),
+            "marginal_contribution_sharpe": round(self.marginal_contribution_sharpe, 4),
+        }
+
 
 class AblationAnalyzer:
     """Computes marginal contribution of each constituent factor in a composite."""

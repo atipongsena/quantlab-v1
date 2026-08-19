@@ -8,7 +8,7 @@ from uuid import uuid4
 from quantlab.data.market_bars import MarketBarStore
 from quantlab.domain.identity import InstrumentId
 from quantlab.domain.market import BarPriceSemantic, MarketBar
-from quantlab.infrastructure.duckdb import LocalAnalyticalStore
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
 
 
 def test_market_bar_store_roundtrip_and_semantics(tmp_path: Path) -> None:

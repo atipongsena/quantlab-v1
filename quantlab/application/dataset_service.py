@@ -19,7 +19,6 @@ except ModuleNotFoundError:
 from quantlab.common.hashing import canonical_hash
 from quantlab.data.corporate_actions import (
     SqlCorporateActionStore,
-    apply_adjustments,
 )
 from quantlab.data.datasets import DatasetManifest, DatasetPublisher
 from quantlab.data.fundamentals import FundamentalValue, SqlFundamentalStore
@@ -37,9 +36,9 @@ from quantlab.domain.identity import (
     SymbolHistory,
 )
 from quantlab.domain.market import BarPriceSemantic, MarketBar
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
 from quantlab.infrastructure.artifacts import LocalArtifactStore
 from quantlab.infrastructure.db import DatabaseConfig, DatabaseEngine
-from quantlab.infrastructure.duckdb import LocalAnalyticalStore
 from quantlab.infrastructure.instrument_repository import SqlInstrumentRepository
 
 
@@ -75,13 +74,18 @@ class DatasetService:
         if not source_dir.is_absolute():
             source_dir = self._base_dir / source_dir
 
+        # A dataset may publish a window of a larger fixture. Slicing here rather than at
+        # query time means the manifest hash pins the exact sessions a study ran on.
+        window_start = date.fromisoformat(str(cfg["start_date"])) if cfg.get("start_date") else None
+        window_end = date.fromisoformat(str(cfg["end_date"])) if cfg.get("end_date") else None
+
         # 1. Run migrations
         run_migrations(self._db_engine)
 
         inst_repo = SqlInstrumentRepository(self._db_engine)
         action_store = SqlCorporateActionStore(self._db_engine)
         fund_store = SqlFundamentalStore(self._db_engine)
-        bar_store = MarketBarStore(self._analytical_store)
+        bar_store = MarketBarStore(self._analytical_store, MarketBarStore.namespace_for(dataset_id))
 
         # 2. Parse listings
         listings_file = source_dir / "listings.csv"
@@ -147,6 +151,7 @@ class DatasetService:
                         "name": inst.issuer_name,
                         "type": inst.instrument_type.value,
                         "exchange": exchange,
+                        "sector": (row.get("sector") or "UNKNOWN").strip().upper(),
                         "active_from": listed_dt.isoformat(),
                         "active_to": delisted_dt.isoformat() if delisted_dt else "",
                         "status": status.value,
@@ -257,10 +262,9 @@ class DatasetService:
                     }
                 )
 
-        # 5. Parse market prices and write raw & adjusted bars
+        # 5. Parse market prices and write raw bars
         prices_file = source_dir / "prices.csv"
         raw_bars: list[MarketBar] = []
-        raw_bars_by_inst: dict[InstrumentId, list[MarketBar]] = {}
         prices_data: list[dict[str, object]] = []
 
         if prices_file.exists():
@@ -274,6 +278,10 @@ class DatasetService:
                     continue
 
                 session = date.fromisoformat(row["date"].strip())
+                if window_start and session < window_start:
+                    continue
+                if window_end and session > window_end:
+                    continue
                 close_str = row["close"].strip()
                 if not close_str:
                     continue
@@ -310,7 +318,6 @@ class DatasetService:
                     source="fixture",
                 )
                 raw_bars.append(bar)
-                raw_bars_by_inst.setdefault(resolved_id, []).append(bar)
                 prices_data.append(
                     {
                         "instrument_id": str(resolved_id.value),
@@ -324,17 +331,11 @@ class DatasetService:
                     }
                 )
 
-        # Write raw bars
+        # Only raw bars are persisted. Adjusted series are derived on read by
+        # PointInTimeDataFacade, which applies solely the actions known as of the query
+        # time; a materialized adjusted copy would be a second source of truth that is
+        # not point-in-time and would drift from it.
         bar_store.write_daily_bars(raw_bars)
-
-        # Generate and write adjusted bars
-        adjusted_bars: list[MarketBar] = []
-        for inst_id, bars in raw_bars_by_inst.items():
-            acts = action_store.get_actions(inst_id)
-            adj_bars = apply_adjustments(bars, acts)
-            adjusted_bars.extend(adj_bars)
-
-        bar_store.write_daily_bars(adjusted_bars)
 
         # 6. Quality audit
         auditor = DataQualityAuditor()

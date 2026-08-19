@@ -93,6 +93,32 @@ def package_milestone(package: str) -> str | None:
     return None
 
 
+# Directories that hold vendored or generated content. Their contents are not this
+# project's source, so scanning them reports scope violations for words that appear in
+# somebody else's licence file or a bundler's manifest.
+VENDORED_DIR_NAMES = frozenset(
+    {
+        "node_modules",
+        ".next",
+        "out",
+        "dist",
+        "build",
+        "coverage",
+        ".venv",
+        ".worktrees",
+        "__pycache__",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+    }
+)
+
+
+def is_vendored(path: Path, root: Path) -> bool:
+    """True when any directory on the path to root is vendored or generated."""
+    return any(part in VENDORED_DIR_NAMES for part in path.relative_to(root).parts)
+
+
 def package_violations(root: Path, milestone: str) -> list[dict[str, str]]:
     """Find package directories that are too early or unapproved."""
     current_index = MILESTONES.index(milestone)
@@ -107,7 +133,9 @@ def package_violations(root: Path, milestone: str) -> list[dict[str, str]]:
         packages.update(
             directory.relative_to(root).as_posix()
             for directory in source_path.rglob("*")
-            if directory.is_dir() and not directory.name.startswith((".", "__"))
+            if directory.is_dir()
+            and not directory.name.startswith((".", "__"))
+            and not is_vendored(directory, root)
         )
 
     for package in sorted(packages):
@@ -132,7 +160,9 @@ def scoped_files(root: Path) -> list[Path]:
         for content_root in CONTENT_ROOTS
         if (content_path := root / content_root).exists()
         for path in content_path.rglob("*")
-        if path.is_file() and path.suffix.lower() in CONTENT_SUFFIXES
+        if path.is_file()
+        and path.suffix.lower() in CONTENT_SUFFIXES
+        and not is_vendored(path, root)
     }
     files.update(
         root / artifact for artifact in DEPENDENCY_ARTIFACTS if (root / artifact).is_file()

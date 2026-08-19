@@ -1,53 +1,78 @@
 {
-  "champion_model": "ridge",
-  "champion_reason": "Demonstrated incremental out-of-sample Rank IC of 0.9854 vs composite 0.9711",
+  "champion_model": "composite",
+  "champion_reason": "No model cleared the composite baseline (0.0165 rank IC) by the 0.005 margin required, so the simpler model keeps the slot",
   "reports": [
     {
       "model_name": "composite",
-      "mean_ic": 0.9711,
-      "ic_std": 0.0168,
-      "ic_ir": 920.27,
-      "top_bottom_spread": 0.04,
+      "mean_ic": 0.0165,
+      "ic_std": 0.2357,
+      "ic_ir": 0.0701,
+      "ic_ir_annualized": 0.24,
+      "ic_tstat": 1.19,
+      "n_periods": 288,
+      "top_bottom_spread": 0.009,
       "quintile_returns": [
-        -0.02,
-        -0.01,
-        0.0,
-        0.01,
-        0.02
+        -0.0014,
+        -0.012,
+        0.0055,
+        0.0005,
+        0.0075
       ],
-      "is_monotonic": true
+      "is_monotonic": false
     },
     {
       "model_name": "ridge",
-      "mean_ic": 0.9854,
-      "ic_std": 0.0062,
-      "ic_ir": 2522.93,
-      "top_bottom_spread": 0.04,
+      "mean_ic": 0.014,
+      "ic_std": 0.2294,
+      "ic_ir": 0.0609,
+      "ic_ir_annualized": 0.21,
+      "ic_tstat": 1.03,
+      "n_periods": 288,
+      "top_bottom_spread": 0.0116,
       "quintile_returns": [
-        -0.02,
-        -0.01,
-        0.0,
-        0.01,
-        0.02
+        -0.0021,
+        -0.0049,
+        -0.0014,
+        -0.001,
+        0.0096
       ],
-      "is_monotonic": true
+      "is_monotonic": false
     },
     {
-      "model_name": "lightgbm",
-      "mean_ic": 0.9618,
-      "ic_std": 0.0139,
-      "ic_ir": 1097.29,
-      "top_bottom_spread": 0.04,
+      "model_name": "gbdt",
+      "mean_ic": 0.0152,
+      "ic_std": 0.1917,
+      "ic_ir": 0.0794,
+      "ic_ir_annualized": 0.28,
+      "ic_tstat": 1.35,
+      "n_periods": 288,
+      "top_bottom_spread": 0.0049,
       "quintile_returns": [
-        -0.02,
-        -0.01,
-        0.0,
-        0.01,
-        0.02
+        -0.0006,
+        -0.0078,
+        -0.0014,
+        0.0055,
+        0.0043
       ],
-      "is_monotonic": true
+      "is_monotonic": false
     }
   ],
-  "n_folds": 5,
-  "content_hash": "59f171198537334f3c97b19a9acb0d3e86317edd4a5c00a5401d052ee09ed40a"
+  "n_folds": 24,
+  "content_hash": "e257ec7fe7ca850fe6217047d32c6ffe8a7e9a4baafbce988fd721ab44a8745f",
+  "panel": {
+    "dataset_id": "DATASET-US-30Y-v001",
+    "features": [
+      "max_drawdown_252d",
+      "momentum_12_1",
+      "momentum_6_1",
+      "volatility_60d"
+    ],
+    "label": "cross-sectional rank of 21-session forward return",
+    "monthly_cross_sections": 358,
+    "labelled_rows": 32834,
+    "first_session": "1995-01-31",
+    "last_session": "2024-10-31",
+    "purge_periods": 1,
+    "embargo_periods": 1
+  }
 }

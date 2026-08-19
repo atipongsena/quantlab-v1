@@ -1,0 +1,23 @@
+composite_id: composite-price-v1
+version: v1
+description: >-
+  Price-only baseline composite. The free-data track has no point-in-time filing
+  history, so the fundamental sleeves of composite-v1 (roe, earnings_yield,
+  revenue_growth) have no inputs there and would be dropped as missing. Rather than
+  quietly reweighting a fundamental composite down to its momentum leg, this composite
+  states up front that it is a price-based sort.
+
+# Momentum carries most of the weight, with a low-volatility and low-drawdown sleeve
+# that historically leans the other way in momentum crashes. This is a documented
+# baseline to measure against, not a claim that these weights are optimal.
+weights:
+  momentum_12_1: 0.40
+  momentum_6_1: 0.20
+  volatility_60d: 0.25
+  max_drawdown_252d: 0.15
+
+# A name must have at least this share of the total factor weight available before it
+# gets a composite score. Below that the score is a partial view of the model, not a
+# comparable ranking.
+min_weight_fraction: 0.75
+normalize_method: zscore

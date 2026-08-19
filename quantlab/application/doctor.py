@@ -10,9 +10,9 @@ from types import MappingProxyType
 
 from quantlab.application.fixtures import verify_fixture
 from quantlab.common.config import AppConfig, JsonValue, load_config
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
 from quantlab.infrastructure.artifacts import LocalArtifactStore
 from quantlab.infrastructure.db import DatabaseConfig, DatabaseEngine
-from quantlab.infrastructure.duckdb import LocalAnalyticalStore
 
 
 @dataclass(frozen=True, slots=True)

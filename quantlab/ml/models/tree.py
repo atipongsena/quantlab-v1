@@ -105,8 +105,14 @@ class SimpleDecisionTree:
         return self.predict_row(row, cur.right_node)
 
 
-class LightGBMRanker:
-    """Gradient boosted decision tree ranker implementing LightGBM-style learning."""
+class GradientBoostedRanker:
+    """Gradient boosted decision tree ranker.
+
+    A from-scratch implementation, not a wrapper around LightGBM or scikit-learn: the
+    engine has no third-party runtime dependencies, so every number it produces is
+    traceable to code in this repository. Expect it to be slower and less tuned than a
+    production boosting library.
+    """
 
     def __init__(
         self,
@@ -130,7 +136,7 @@ class LightGBMRanker:
         n_estimators: int = 30,
         learning_rate: float = 0.05,
         max_depth: int = 3,
-    ) -> LightGBMRanker:
+    ) -> GradientBoostedRanker:
         if not X or not y:
             raise ValueError("X and y must not be empty")
 

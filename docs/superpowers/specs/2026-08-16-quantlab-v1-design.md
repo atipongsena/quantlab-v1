@@ -1,7 +1,7 @@
 # QuantLab V1 — Master Design Specification
 
 **Date:** 2026-08-16  
-**Status:** Design and detailed implementation plan approved on 2026-08-16; implementation not started  
+**Status:** Design approved 2026-08-16. Implemented; see the implementation note at the end of this document for where the build deliberately departs from this proposal.  
 **Product:** QuantLab  
 **Positioning:** Reproducible, point-in-time-aware agentic quantitative research and paper-trading platform  
 
@@ -1942,3 +1942,28 @@ Verification at Every Gate
 ```
 
 The next artifact after approval of this written specification must be a detailed implementation plan. Implementation must not begin before that plan is reviewed enough to remove ambiguity around milestone sequencing, test-first slices, and commit checkpoints.
+
+---
+
+## Implementation note (added after the build)
+
+This document is the **design as proposed**, kept as written. Several choices in it were
+not carried into the implementation, and the differences are deliberate rather than
+oversights:
+
+| Proposed here | What was built | Why |
+|---|---|---|
+| PostgreSQL for transactional metadata | SQLite | Nothing in V1 needs concurrent writers or a server process. SQLite keeps the whole system runnable from a clone with no infrastructure. |
+| Parquet files queried by DuckDB | JSON partitions read directly, SQLite for ad-hoc SQL | Partitions are small and read whole. Adding a columnar engine would buy nothing measurable and add a heavy dependency to a project whose selling point is that its numbers are traceable to its own code. |
+| NumPy, SciPy, statsmodels, scikit-learn, LightGBM | All statistics, linear algebra, and the tree learner implemented in-repo | Same reason: every number the engine reports can be traced to code in this repository. The cost is speed, and that cost is real - a thirty-year study takes minutes. |
+| Polars / PyArrow | Standard library | Not needed at this data size. |
+| Typer for the CLI | argparse | One less dependency for the same surface. |
+| TanStack Query, Plotly | Plain fetch, inline SVG | The dashboard reads a handful of static artifacts; a query cache and a charting library would be more machinery than the job needs. |
+
+FastAPI, Pydantic, Next.js, TypeScript, pytest, Hypothesis, Ruff, mypy, and the MCP
+adapter layer were all built as specified.
+
+The point-in-time semantics, factor evaluation requirements, walk-forward discipline,
+falsification ladder, and paper-operations design in this document were followed. Where
+the implementation departs from the spec on those, it is documented in
+`docs/architecture/` and `docs/calculators/`.

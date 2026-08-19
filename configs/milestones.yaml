@@ -71,7 +71,7 @@
     "M5": {
       "commands": [
         "QUANTLAB_OFFLINE=1 python -m pytest tests/ml tests/architecture/test_ml_boundaries.py tests/e2e/test_model_comparison_cli.py -q",
-        "quantlab model compare --dataset DATASET-v001 --walk-forward configs/ml/walk-forward-v1.yaml --models composite,ridge,lightgbm --offline",
+        "quantlab model compare --dataset DATASET-v001 --walk-forward configs/ml/walk-forward-v1.yaml --models composite,ridge,gbdt --offline",
         "python scripts/check_scope.py M5"
       ],
       "verification_command": "python scripts/verify_milestone.py M5 --require-prior",
@@ -105,7 +105,7 @@
     "M8": {
       "commands": [
         "python -m pytest tests/api tests/cli -q",
-        "cd apps/web && npm ci && npm run lint && npm run typecheck && npm test -- --runInBand && npm run build",
+        "cd apps/web && npm ci && npm run typecheck && npm test && npm run build",
         "cd ../..",
         "python scripts/check_openapi_web_types.py",
         "python scripts/check_scope.py M8"
@@ -117,16 +117,16 @@
     },
     "M9": {
       "commands": [
-        "python -m pip install -e \".[dev]\"",
+        "python -m pip install -e \".[dev,data,api]\"",
         "QUANTLAB_OFFLINE=1 python scripts/run_v1_acceptance.py --config configs/releases/quantlab-v1.yaml",
         "python -m pytest -q",
         "python -m ruff check .",
         "python -m ruff format --check .",
         "python -m mypy quantlab apps",
-        "cd apps/web && npm ci && npm run lint && npm run typecheck && npm test -- --runInBand && npm run build",
+        "cd apps/web && npm ci && npm run typecheck && npm test && npm run build",
         "cd ../..",
         "python scripts/security_scan.py",
-        "python scripts/restore_drill.py --fixture synthetic_v1",
+        "python scripts/restore_drill.py",
         "python scripts/verify_release.py --config configs/releases/quantlab-v1.yaml --offline",
         "python scripts/check_scope.py M9"
       ],

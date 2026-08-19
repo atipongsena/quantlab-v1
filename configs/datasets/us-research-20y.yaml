@@ -1,0 +1,17 @@
+dataset_id: DATASET-US-20Y-v001
+version: v001
+fixture: us_research
+source_dir: data/fixtures/us_research/source
+universe_config: configs/universes/us-research-v1.yaml
+
+# Window published by this dataset. The slice is applied at build time so the manifest
+# hash pins the exact sessions any study ran against.
+start_date: "2005-01-01"
+end_date: "2024-12-31"
+
+# The longest factor lookback in the V1 library is 252 sessions, so no cross-section
+# before this date has a complete feature vector (spec 2.5).
+first_eligible_session: "2006-01-03"
+
+benchmark_symbol: SPY
+survivorship_bias: PRESENT

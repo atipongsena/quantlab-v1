@@ -1,9 +1,9 @@
 {
-  "candidate_id": "CAND-composite-top30-v1-46b2b4bb81",
-  "strategy_id": "composite-top30-v1",
-  "verdict": "PAPER_CANDIDATE",
+  "candidate_id": "CAND-us-price-composite-v1-f4af8df8c4",
+  "strategy_id": "us-price-composite-v1",
+  "verdict": "RESEARCH_ONLY",
   "reasons": [
-    "Passed all hard gates and robustness requirements"
+    "Multiple testing warning: evaluated 7 trials (DSR p-value: 0.0027)"
   ],
   "hard_gates": [
     {
@@ -28,27 +28,96 @@
     }
   ],
   "robustness": {
-    "candidate_id": "CAND-composite-top30-v1-46b2b4bb81",
+    "candidate_id": "CAND-us-price-composite-v1-f4af8df8c4",
     "top_k_topology": "plateau",
-    "break_even_cost_bps": 300.0,
+    "top_k_cells": [
+      {
+        "top_k": 20,
+        "sharpe_ratio": 1.129,
+        "cagr": 0.23765,
+        "max_drawdown": 0.323284
+      },
+      {
+        "top_k": 30,
+        "sharpe_ratio": 1.0377,
+        "cagr": 0.218294,
+        "max_drawdown": 0.351709
+      },
+      {
+        "top_k": 50,
+        "sharpe_ratio": 0.9675,
+        "cagr": 0.190492,
+        "max_drawdown": 0.361825
+      }
+    ],
+    "break_even_cost_bps": 708.5,
     "is_cost_fragile": false,
-    "herfindahl_index": 0.0333,
+    "herfindahl_index": 0.0324,
     "is_excessively_concentrated": false,
-    "ablations_count": 3
+    "ablations": [
+      {
+        "omitted_factor": "momentum_12_1",
+        "sharpe_ratio": 0.8411,
+        "cagr": 0.194791,
+        "marginal_contribution_sharpe": 0.1966
+      },
+      {
+        "omitted_factor": "momentum_6_1",
+        "sharpe_ratio": 1.0103,
+        "cagr": 0.219487,
+        "marginal_contribution_sharpe": 0.0274
+      },
+      {
+        "omitted_factor": "volatility_60d",
+        "sharpe_ratio": 0.9449,
+        "cagr": 0.183777,
+        "marginal_contribution_sharpe": 0.0928
+      },
+      {
+        "omitted_factor": "max_drawdown_252d",
+        "sharpe_ratio": 0.9784,
+        "cagr": 0.194632,
+        "marginal_contribution_sharpe": 0.0593
+      }
+    ],
+    "ablations_count": 4,
+    "subperiod_cagr": {
+      "2015": 0.113614,
+      "2016": 0.280038,
+      "2017": 0.314744,
+      "2018": -0.035018,
+      "2019": 0.272982,
+      "2020": 0.444702,
+      "2021": 0.41114,
+      "2022": -0.046724,
+      "2023": 0.304427,
+      "2024": 0.229393
+    }
   },
   "bootstrap": {
     "metric_name": "annualized_sharpe",
-    "point_estimate": 1.6812,
-    "ci_lower": -2.1147,
-    "ci_upper": 5.8768,
-    "standard_error": 2.0639
+    "point_estimate": 1.0445,
+    "ci_lower": 0.4591,
+    "ci_upper": 1.668,
+    "standard_error": 0.3038
   },
   "multiple_testing": {
-    "n_trials": 1,
-    "observed_sharpe": 1.6812,
-    "deflated_sharpe_p_value": 1.0,
-    "is_statistically_significant": true,
-    "is_multiple_testing_warned": false
+    "n_trials": 7,
+    "observed_sharpe": 1.0445,
+    "deflated_sharpe_p_value": 0.0027,
+    "is_statistically_significant": false,
+    "is_multiple_testing_warned": true
   },
-  "content_hash": "18ea676c219cc36fe79f71d2198f10fc79d504382fdfe120c421dc69ec7ebea1"
+  "content_hash": "84698967a03fd38dfb7e6b68ba802da9c23625413536f53354f7d2d8a647026f",
+  "run": {
+    "dataset_id": "DATASET-US-30Y-v001",
+    "strategy_config": "configs/strategies/us-price-composite-v1.yaml",
+    "start_session": "2015-01-02",
+    "end_session": "2024-12-31",
+    "sessions": 2516,
+    "annual_turnover": 1.5516,
+    "baseline_cagr": 0.218294,
+    "gross_of_cost_cagr": 0.219845,
+    "sweeps_run": true
+  }
 }

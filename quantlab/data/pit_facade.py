@@ -29,6 +29,48 @@ class PointInTimeDataFacade:
         self._macro_store = macro_store
         self._universe_engine = universe_engine
 
+        # Several factors are evaluated against the same instrument at the same as-of
+        # instant with different lookback windows. Adjusting the same bars once per
+        # factor is the dominant cost of a panel build, so the widest window seen for an
+        # (instrument, as_of) pair is kept and narrower requests are sliced out of it.
+        # The cache is dropped whenever as_of moves, which bounds it to one cross-section
+        # and keeps every entry point-in-time correct for the instant it was built at.
+        self._adjusted_as_of: datetime | None = None
+        self._adjusted_cache: dict[InstrumentId, tuple[date, date, tuple[MarketBar, ...]]] = {}
+
+    def _cached_adjusted(
+        self,
+        instrument_id: InstrumentId,
+        start_date: date,
+        end_date: date,
+        as_of: datetime,
+    ) -> tuple[MarketBar, ...] | None:
+        if self._adjusted_as_of != as_of:
+            return None
+        entry = self._adjusted_cache.get(instrument_id)
+        if entry is None:
+            return None
+        cached_start, cached_end, bars = entry
+        if cached_start > start_date or cached_end < end_date:
+            return None
+        return tuple(b for b in bars if start_date <= b.session <= end_date)
+
+    def _store_adjusted(
+        self,
+        instrument_id: InstrumentId,
+        start_date: date,
+        end_date: date,
+        as_of: datetime,
+        bars: tuple[MarketBar, ...],
+    ) -> None:
+        if self._adjusted_as_of != as_of:
+            self._adjusted_as_of = as_of
+            self._adjusted_cache = {}
+        existing = self._adjusted_cache.get(instrument_id)
+        if existing is not None and existing[0] <= start_date and existing[1] >= end_date:
+            return
+        self._adjusted_cache[instrument_id] = (start_date, end_date, bars)
+
     def get_market_bars(
         self,
         instrument_id: InstrumentId,
@@ -37,6 +79,11 @@ class PointInTimeDataFacade:
         as_of: datetime,
         adjusted: bool = True,
     ) -> tuple[MarketBar, ...]:
+        if adjusted:
+            cached = self._cached_adjusted(instrument_id, start_date, end_date, as_of)
+            if cached is not None:
+                return cached
+
         raw_bars = self._bar_store.get_bars(
             instrument_id=instrument_id,
             start_date=start_date,
@@ -53,8 +100,9 @@ class PointInTimeDataFacade:
             start_date=start_date,
             end_date=as_of.date(),
         )
-        adj_bars = apply_adjustments(valid_raw, actions, as_of=as_of)
-        return tuple(adj_bars)
+        adj_bars = tuple(apply_adjustments(valid_raw, actions, as_of=as_of))
+        self._store_adjusted(instrument_id, start_date, end_date, as_of, adj_bars)
+        return adj_bars
 
     def get_fundamentals(
         self,

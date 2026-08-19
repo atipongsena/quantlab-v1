@@ -1,0 +1,36 @@
+strategy_id: us-price-composite-v1
+version: v1
+description: >-
+  Long-only monthly rebalance into the top names of the price-based composite, run on
+  the real US research universe. Signals are formed at the month-end close and filled at
+  the next session's open; dividends arrive as cash through the corporate-action path.
+
+composite_id: composite-price-v1
+dataset: DATASET-US-30Y-v001
+
+initial_cash: "1000000.00"
+
+selection:
+  # 30 names out of a ~95 name universe is roughly the top third. The buffer keeps a
+  # held name until it drops out of the top 40, which is what stops the portfolio from
+  # churning on names oscillating around the cut line.
+  target_size: 30
+  buffer_size: 40
+
+weighting:
+  method: equal
+  cash_buffer_pct: 0.01
+  max_name_weight: 0.05
+
+rebalance:
+  frequency: monthly
+  schedule: month_end_close
+
+execution:
+  # 5 bps of slippage and half a cent a share is a retail-to-small-institution
+  # assumption for large-cap US equities. The validation cost sweep is what establishes
+  # how far this can move before the strategy stops working.
+  slippage_bps: 5.0
+  commission_per_share: 0.005
+
+benchmark: SPY

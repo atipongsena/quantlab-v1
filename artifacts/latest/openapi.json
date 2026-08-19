@@ -1,21 +1,52 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "QuantLab Research & Trading API",
-    "version": "1.0.0",
-    "description": "Production quantitative research, validation, and paper execution API"
+    "title": "QuantLab API",
+    "description": "Serves the evidence artifacts produced by the QuantLab CLI: factor research, backtests, validation verdicts, walk-forward model comparisons, and the corporate-action verification report. Runs are started from the CLI, not from here, so every number served is traceable to a hashed artifact on disk.",
+    "version": "1.0.0"
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "System Health Check",
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "description": "Liveness plus which evidence is currently on disk.",
+        "operationId": "health_health_get",
         "responses": {
           "200": {
-            "description": "System status OK",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/artifacts": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "List Artifacts",
+        "description": "Every artifact the API can serve, and the command that produces each one.",
+        "operationId": "list_artifacts_api_v1_artifacts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Artifacts Api V1 Artifacts Get"
                 }
               }
             }
@@ -25,14 +56,21 @@
     },
     "/api/v1/datasets": {
       "get": {
-        "summary": "List Available Datasets",
+        "tags": [
+          "data"
+        ],
+        "summary": "List Datasets",
+        "description": "Datasets that have been built into this working directory.",
+        "operationId": "list_datasets_api_v1_datasets_get",
         "responses": {
           "200": {
-            "description": "List of point-in-time datasets",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DatasetListResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Datasets Api V1 Datasets Get"
                 }
               }
             }
@@ -40,26 +78,23 @@
         }
       }
     },
-    "/api/v1/factors/research": {
-      "post": {
-        "summary": "Run Factor Research Tear Sheet",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FactorResearchRequest"
-              }
-            }
-          }
-        },
+    "/api/v1/factor-research": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Factor Research",
+        "description": "Latest single-factor research report.",
+        "operationId": "factor_research_api_v1_factor_research_get",
         "responses": {
           "200": {
-            "description": "Factor research results",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FactorResearchResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Factor Research Api V1 Factor Research Get"
                 }
               }
             }
@@ -68,25 +103,22 @@
       }
     },
     "/api/v1/backtest": {
-      "post": {
-        "summary": "Execute Strategy Backtest",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BacktestRequest"
-              }
-            }
-          }
-        },
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Backtest",
+        "description": "Latest backtest manifest, including the equity curve and benchmark comparison.",
+        "operationId": "backtest_api_v1_backtest_get",
         "responses": {
           "200": {
-            "description": "Backtest metrics and equity curve",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BacktestResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Backtest Api V1 Backtest Get"
                 }
               }
             }
@@ -95,32 +127,22 @@
       }
     },
     "/api/v1/validation": {
-      "post": {
-        "summary": "Run Correctness and Robustness Validation",
-        "responses": {
-          "200": {
-            "description": "Validation verdict and gate results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/models/compare": {
       "get": {
-        "summary": "Walk-Forward Model Comparison",
+        "tags": [
+          "research"
+        ],
+        "summary": "Validation",
+        "description": "Latest falsification report and lifecycle verdict.",
+        "operationId": "validation_api_v1_validation_get",
         "responses": {
           "200": {
-            "description": "Model comparison and champion selection",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelComparisonResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Validation Api V1 Validation Get"
                 }
               }
             }
@@ -128,16 +150,23 @@
         }
       }
     },
-    "/api/v1/paper/run": {
-      "post": {
-        "summary": "Run Daily Paper Execution Cycle",
+    "/api/v1/models/comparison": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Model Comparison",
+        "description": "Latest purged walk-forward model comparison.",
+        "operationId": "model_comparison_api_v1_models_comparison_get",
         "responses": {
           "200": {
-            "description": "Paper run execution summary",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaperRunResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Model Comparison Api V1 Models Comparison Get"
                 }
               }
             }
@@ -145,16 +174,23 @@
         }
       }
     },
-    "/api/v1/paper/reconcile": {
-      "post": {
-        "summary": "Reconcile Shadow Ledger with Broker",
+    "/api/v1/market-data/verification": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Market Data Verification",
+        "description": "Corporate-action adjustment checked against the data provider's own series.",
+        "operationId": "market_data_verification_api_v1_market_data_verification_get",
         "responses": {
           "200": {
-            "description": "Reconciliation break report",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReconciliationResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Market Data Verification Api V1 Market Data Verification Get"
                 }
               }
             }
@@ -162,233 +198,52 @@
         }
       }
     },
-    "/api/v1/campaigns/run": {
-      "post": {
-        "summary": "Run Autonomous Multi-Agent Research Campaign",
+    "/api/v1/research-report": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Research Report",
+        "description": "Latest signed research campaign report.",
+        "operationId": "research_report_api_v1_research_report_get",
         "responses": {
           "200": {
-            "description": "Research campaign report",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CampaignResponse"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Research Report Api V1 Research Report Get"
                 }
               }
             }
           }
         }
       }
-    }
-  },
-  "components": {
-    "schemas": {
-      "HealthResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "status",
-          "version"
-        ]
-      },
-      "DatasetListResponse": {
-        "type": "object",
-        "properties": {
-          "datasets": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "dataset_id": {
-                  "type": "string"
-                },
-                "instruments_count": {
-                  "type": "integer"
+    },
+    "/api/v1/paper/evidence": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Paper Evidence",
+        "description": "Latest paper trading forward evidence.",
+        "operationId": "paper_evidence_api_v1_paper_evidence_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Paper Evidence Api V1 Paper Evidence Get"
                 }
               }
             }
           }
-        },
-        "required": [
-          "datasets"
-        ]
-      },
-      "FactorResearchRequest": {
-        "type": "object",
-        "properties": {
-          "factor_name": {
-            "type": "string"
-          },
-          "dataset_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "factor_name"
-        ]
-      },
-      "FactorResearchResponse": {
-        "type": "object",
-        "properties": {
-          "factor_name": {
-            "type": "string"
-          },
-          "mean_ic": {
-            "type": "number"
-          },
-          "ic_ir": {
-            "type": "number"
-          },
-          "annualized_return": {
-            "type": "number"
-          },
-          "sharpe_ratio": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "factor_name",
-          "mean_ic",
-          "ic_ir"
-        ]
-      },
-      "BacktestRequest": {
-        "type": "object",
-        "properties": {
-          "strategy_config": {
-            "type": "string"
-          },
-          "dataset_id": {
-            "type": "string"
-          }
         }
-      },
-      "BacktestResponse": {
-        "type": "object",
-        "properties": {
-          "annualized_return": {
-            "type": "number"
-          },
-          "sharpe_ratio": {
-            "type": "number"
-          },
-          "max_drawdown": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "annualized_return",
-          "sharpe_ratio",
-          "max_drawdown"
-        ]
-      },
-      "ValidationResponse": {
-        "type": "object",
-        "properties": {
-          "verdict": {
-            "type": "string"
-          },
-          "lookahead_leakage_clean": {
-            "type": "boolean"
-          },
-          "data_integrity_passed": {
-            "type": "boolean"
-          },
-          "reproducibility_verified": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "verdict"
-        ]
-      },
-      "ModelComparisonResponse": {
-        "type": "object",
-        "properties": {
-          "champion_model": {
-            "type": "string"
-          },
-          "champion_reason": {
-            "type": "string"
-          },
-          "reports": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
-        },
-        "required": [
-          "champion_model",
-          "reports"
-        ]
-      },
-      "PaperRunResponse": {
-        "type": "object",
-        "properties": {
-          "session": {
-            "type": "string"
-          },
-          "orders_count": {
-            "type": "integer"
-          },
-          "fills_count": {
-            "type": "integer"
-          },
-          "total_equity": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "session",
-          "orders_count",
-          "total_equity"
-        ]
-      },
-      "ReconciliationResponse": {
-        "type": "object",
-        "properties": {
-          "is_clean": {
-            "type": "boolean"
-          },
-          "max_severity": {
-            "type": "string"
-          },
-          "breaks": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
-        },
-        "required": [
-          "is_clean",
-          "max_severity"
-        ]
-      },
-      "CampaignResponse": {
-        "type": "object",
-        "properties": {
-          "report_id": {
-            "type": "string"
-          },
-          "campaign_id": {
-            "type": "string"
-          },
-          "verdicts": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "report_id",
-          "campaign_id"
-        ]
       }
     }
   }

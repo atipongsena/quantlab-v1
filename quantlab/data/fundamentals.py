@@ -76,7 +76,7 @@ class SqlFundamentalStore(FundamentalStore):
             for s in statements:
                 cursor.execute(
                     """
-                    INSERT INTO fundamentals (
+                    INSERT OR IGNORE INTO fundamentals (
                         instrument_id, period_end, filing_date, available_at,
                         metric, value, is_restatement, source
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)

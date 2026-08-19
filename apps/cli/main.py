@@ -258,7 +258,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to validation config YAML (e.g. configs/validation/default-v1.yaml)",
     )
     validate_run_cmd.add_argument(
-        "--experiment", default="EXP-SYNTHETIC", help="Experiment identifier"
+        "--experiment", default="EXP-US-PRICE-COMPOSITE", help="Experiment identifier"
+    )
+    validate_run_cmd.add_argument(
+        "--strategy",
+        default="configs/strategies/us-price-composite-v1.yaml",
+        help="Path to the strategy config to falsify",
+    )
+    validate_run_cmd.add_argument(
+        "--dataset", default="DATASET-US-30Y-v001", help="Dataset identifier"
+    )
+    validate_run_cmd.add_argument("--start", help="Start date YYYY-MM-DD")
+    validate_run_cmd.add_argument("--end", help="End date YYYY-MM-DD")
+    validate_run_cmd.add_argument(
+        "--no-sweeps",
+        action="store_true",
+        help="Skip the parameter and ablation re-runs (much faster, much weaker evidence)",
     )
     validate_run_cmd.add_argument(
         "--offline", action="store_true", help="Run in strict offline mode"
@@ -295,7 +310,9 @@ def build_parser() -> argparse.ArgumentParser:
     model_compare_cmd = model_subparsers.add_parser(
         "compare", help="Compare heuristic and ML ranking models across walk-forward folds"
     )
-    model_compare_cmd.add_argument("--dataset", default="DATASET-v001", help="Dataset identifier")
+    model_compare_cmd.add_argument(
+        "--dataset", default="DATASET-US-30Y-v001", help="Dataset identifier"
+    )
     model_compare_cmd.add_argument(
         "--walk-forward",
         default="configs/ml/walk-forward-v1.yaml",
@@ -303,8 +320,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     model_compare_cmd.add_argument(
         "--models",
-        default="composite,ridge,lightgbm",
+        default="composite,ridge,gbdt",
         help="Comma-separated model names to compare",
+    )
+    model_compare_cmd.add_argument("--start", help="Start date YYYY-MM-DD")
+    model_compare_cmd.add_argument("--end", help="End date YYYY-MM-DD")
+    model_compare_cmd.add_argument(
+        "--control",
+        action="store_true",
+        help="Also run the label-shuffle permutation control",
+    )
+    model_compare_cmd.add_argument(
+        "--permutations",
+        type=int,
+        default=5,
+        help="Label shuffles to run for the control (more permutations, tighter p-value)",
     )
     model_compare_cmd.add_argument(
         "--offline", action="store_true", help="Run in strict offline mode"

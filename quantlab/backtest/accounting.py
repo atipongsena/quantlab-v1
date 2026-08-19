@@ -94,6 +94,7 @@ class AccountingEngine:
         self,
         as_of: datetime,
         close_prices: Mapping[InstrumentId, Decimal],
+        last_known_prices: Mapping[InstrumentId, Decimal] | None = None,
     ) -> PortfolioSnapshot:
         return mark_to_market(
             portfolio_id=self._portfolio_id,
@@ -101,4 +102,5 @@ class AccountingEngine:
             cash_ledger=self._cash_ledger,
             position_ledger=self._position_ledger,
             close_prices=close_prices,
+            last_known_prices=last_known_prices,
         )

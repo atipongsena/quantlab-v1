@@ -1,334 +1,565 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { EquityCurve, type CurvePoint } from "../components/EquityCurve";
+import { Card, Panel, Provenance, Stat } from "../components/primitives";
 import {
-  Activity,
-  AlertTriangle,
-  Award,
-  Bot,
-  Brain,
-  CheckCircle2,
-  DollarSign,
-  Layers,
-  LineChart,
-  ShieldAlert,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
+  API_BASE,
+  formatNumber,
+  formatPercent,
+  formatSigned,
+  getBacktest,
+  getDatasets,
+  getFactorResearch,
+  getHealth,
+  getMarketDataVerification,
+  getModelComparison,
+  getValidation,
+  type Loaded,
+} from "../lib/api";
+import type {
+  BacktestResponse,
+  DatasetListResponse,
+  FactorResearchResponse,
+  HealthResponse,
+  MarketDataVerificationResponse,
+  ModelComparisonResponse,
+  ValidationResponse,
+} from "../types/api";
+
+type TabKey = "performance" | "factors" | "models" | "validation" | "data";
+
+const TABS: Array<{ key: TabKey; label: string }> = [
+  { key: "performance", label: "Performance" },
+  { key: "factors", label: "Factor research" },
+  { key: "models", label: "Walk-forward ML" },
+  { key: "validation", label: "Falsification" },
+  { key: "data", label: "Data integrity" },
+];
+
+function useLoaded<T>(loader: () => Promise<Loaded<T>>): Loaded<T> | null {
+  const [value, setValue] = useState<Loaded<T> | null>(null);
+  useEffect(() => {
+    let live = true;
+    loader().then((result) => {
+      if (live) setValue(result);
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return value;
+}
+
+/** Rebuild growth-of-1.0 series from the recorded equity path. */
+function toCurve(backtest: BacktestResponse): CurvePoint[] {
+  const sessions = Object.keys(backtest.equity).sort();
+  if (sessions.length === 0) return [];
+
+  const first = Number(backtest.equity[sessions[0]]);
+  if (!Number.isFinite(first) || first === 0) return [];
+
+  // The benchmark path is not stored session by session, only as summary statistics, so
+  // it is drawn as the constant-growth path that reaches its recorded total return. It
+  // is a reference level, not a claim about the benchmark's actual drawdowns.
+  const benchmarkTotal = backtest.benchmark?.benchmark_total_return ?? null;
+
+  const step = Math.max(1, Math.floor(sessions.length / 600));
+  const points: CurvePoint[] = [];
+  for (let i = 0; i < sessions.length; i += step) {
+    const session = sessions[i];
+    const strategy = Number(backtest.equity[session]) / first;
+    const progress = i / (sessions.length - 1);
+    points.push({
+      session,
+      strategy,
+      benchmark:
+        benchmarkTotal === null ? null : Math.pow(1 + benchmarkTotal, progress),
+    });
+  }
+  const lastSession = sessions[sessions.length - 1];
+  points.push({
+    session: lastSession,
+    strategy: Number(backtest.equity[lastSession]) / first,
+    benchmark: benchmarkTotal === null ? null : 1 + benchmarkTotal,
+  });
+  return points;
+}
+
+const TAB_KEYS = new Set<string>(TABS.map((entry) => entry.key));
+
+function tabFromHash(): TabKey {
+  if (typeof window === "undefined") return "performance";
+  const hash = window.location.hash.replace("#", "");
+  return TAB_KEYS.has(hash) ? (hash as TabKey) : "performance";
+}
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "factors" | "ml" | "validation" | "paper" | "campaigns"
-  >("overview");
+  // The tab lives in the URL hash so a specific view can be linked, bookmarked, or
+  // opened directly by a screenshot run.
+  const [tab, setTabState] = useState<TabKey>("performance");
+
+  useEffect(() => {
+    setTabState(tabFromHash());
+    const onHashChange = () => setTabState(tabFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  const setTab = (key: TabKey) => {
+    setTabState(key);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${key}`);
+    }
+  };
+
+  const health = useLoaded<HealthResponse>(getHealth);
+  const datasets = useLoaded<DatasetListResponse>(getDatasets);
+  const backtest = useLoaded<BacktestResponse>(getBacktest);
+  const factors = useLoaded<FactorResearchResponse>(getFactorResearch);
+  const models = useLoaded<ModelComparisonResponse>(getModelComparison);
+  const validation = useLoaded<ValidationResponse>(getValidation);
+  const verification = useLoaded<MarketDataVerificationResponse>(getMarketDataVerification);
+
+  const curve = useMemo(
+    () => (backtest?.state === "ok" ? toCurve(backtest.data) : []),
+    [backtest],
+  );
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col justify-between p-4">
+    <main className="mx-auto max-w-6xl px-6 py-8">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-8 px-2">
-            <div className="h-8 w-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
-              QL
-            </div>
-            <div>
-              <h1 className="font-bold text-base leading-none">QuantLab V1</h1>
-              <span className="text-xs text-slate-400">Institutional Quant OS</span>
-            </div>
-          </div>
-
-          <nav className="space-y-1">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "overview"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
-            >
-              <Activity className="h-4 w-4" />
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab("factors")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "factors"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
-            >
-              <Layers className="h-4 w-4" />
-              Factor Research
-            </button>
-            <button
-              onClick={() => setActiveTab("ml")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "ml"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
-            >
-              <Brain className="h-4 w-4" />
-              Walk-Forward ML
-            </button>
-            <button
-              onClick={() => setActiveTab("validation")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "validation"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
-            >
-              <ShieldAlert className="h-4 w-4" />
-              Validation & Defense
-            </button>
-            <button
-              onClick={() => setActiveTab("paper")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "paper"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
-            >
-              <DollarSign className="h-4 w-4" />
-              Paper Operations
-            </button>
-            <button
-              onClick={() => setActiveTab("campaigns")}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "campaigns"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-              }`}
-            >
-              <Bot className="h-4 w-4" />
-              AI Agent Research
-            </button>
-          </nav>
+          <h1 className="text-2xl font-semibold text-slate-100">QuantLab</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Point-in-time research, event-driven backtesting, and falsification gates.
+          </p>
         </div>
-
-        <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800 text-xs text-slate-400">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-semibold text-slate-300">System Ready</span>
+        <div className="text-right text-xs text-slate-500">
+          <div>
+            API <code className="text-slate-400">{API_BASE}</code>
           </div>
-          <div>Point-in-Time DuckDB active</div>
+          {health?.state === "ok" ? (
+            <div className="mt-1 text-slate-400">
+              {health.data.artifacts_available} of {health.data.artifacts_total} artifacts on disk
+            </div>
+          ) : null}
         </div>
-      </aside>
+      </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        {/* Header */}
-        <header className="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900/30 backdrop-blur">
-          <div className="flex items-center gap-4">
-            <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">
-              Active Strategy
-            </span>
-            <span className="text-sm font-semibold bg-slate-800 px-2.5 py-1 rounded-md text-emerald-400 border border-slate-700">
-              composite-top30-v1
-            </span>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span>Dataset: <strong className="text-slate-200">DATASET-v001</strong></span>
-            <span>•</span>
-            <span>Clock: <strong className="text-slate-200">2026-01-05 (PIT)</strong></span>
-          </div>
-        </header>
+      <nav className="mb-6 flex flex-wrap gap-2">
+        {TABS.map((entry) => (
+          <button
+            key={entry.key}
+            type="button"
+            onClick={() => setTab(entry.key)}
+            className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              tab === entry.key
+                ? "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/30"
+                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+            }`}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </nav>
 
-        {/* Dynamic Tab Body */}
-        <div className="p-6 space-y-6 max-w-7xl">
-          {/* Top Metrics Cards */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
-              <span className="text-xs text-slate-400 font-medium">Sharpe Ratio</span>
-              <div className="text-2xl font-bold text-slate-100 mt-1 flex items-center gap-2">
-                1.42
-                <span className="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                  +18.2% Ann.
-                </span>
-              </div>
-            </div>
-            <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
-              <span className="text-xs text-slate-400 font-medium">Mean Rank IC</span>
-              <div className="text-2xl font-bold text-slate-100 mt-1 flex items-center gap-2">
-                0.058
-                <span className="text-xs font-normal text-slate-400">IR 2.14</span>
-              </div>
-            </div>
-            <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
-              <span className="text-xs text-slate-400 font-medium">Deflated Sharpe (DSR)</span>
-              <div className="text-2xl font-bold text-emerald-400 mt-1 flex items-center gap-2">
-                0.91
-                <span className="text-xs font-normal text-slate-400">Passes &gt;0.80</span>
-              </div>
-            </div>
-            <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
-              <span className="text-xs text-slate-400 font-medium">Max Drawdown</span>
-              <div className="text-2xl font-bold text-slate-100 mt-1">
-                8.2%
-              </div>
-            </div>
-          </div>
+      {tab === "performance" ? (
+        <div className="space-y-6">
+          <Panel result={backtest}>
+            {(data) => (
+              <>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <Stat
+                    label="CAGR"
+                    value={formatPercent(data.metrics.cagr)}
+                    hint={`${data.start_session} to ${data.end_session}`}
+                    tone={data.metrics.cagr > 0 ? "good" : "bad"}
+                  />
+                  <Stat
+                    label="Sharpe"
+                    value={formatSigned(data.metrics.sharpe_ratio)}
+                    hint={`vol ${formatPercent(data.metrics.annualized_volatility)}`}
+                  />
+                  <Stat
+                    label="Max drawdown"
+                    value={formatPercent(-Math.abs(data.metrics.max_drawdown))}
+                    tone="bad"
+                  />
+                  <Stat
+                    label="Turnover"
+                    value={formatPercent(data.metrics.total_turnover, 0)}
+                    hint={`${data.total_fills} fills`}
+                  />
+                </div>
 
-          {/* Tab 1: Overview */}
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h3 className="font-semibold text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  Strategy Cumulative Equity Performance
-                </h3>
-                <div className="h-64 bg-slate-950/80 rounded-lg border border-slate-800/80 p-4 flex flex-col justify-end">
-                  {/* Mock Sparkline/Equity visualization */}
-                  <div className="h-full flex items-end gap-1.5 pt-8">
-                    {[10, 15, 12, 22, 25, 20, 32, 40, 38, 48, 55, 52, 60, 68, 75, 72, 85, 94, 92, 100].map(
-                      (h, i) => (
-                        <div
-                          key={i}
-                          style={{ height: `${h}%` }}
-                          className="flex-1 bg-gradient-to-t from-emerald-600/30 to-emerald-400 rounded-t-sm"
-                        />
-                      )
-                    )}
+                {data.benchmark ? (
+                  <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <Stat
+                      label={`${data.benchmark.benchmark_symbol} CAGR`}
+                      value={formatPercent(data.benchmark.benchmark_cagr)}
+                      hint="buy and hold, total return"
+                    />
+                    <Stat label="Beta" value={formatNumber(data.benchmark.beta)} />
+                    <Stat
+                      label="Jensen alpha"
+                      value={formatPercent(data.benchmark.annualized_alpha)}
+                      tone={data.benchmark.annualized_alpha > 0 ? "good" : "bad"}
+                    />
+                    <Stat
+                      label="Information ratio"
+                      value={formatSigned(data.benchmark.information_ratio)}
+                      hint={`TE ${formatPercent(data.benchmark.tracking_error)}`}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-6">
+                  <Card
+                    title="Cumulative equity"
+                    subtitle={`${data.strategy_id} on ${data.dataset_id}`}
+                  >
+                    <EquityCurve
+                      points={curve}
+                      benchmarkSymbol={data.benchmark?.benchmark_symbol ?? null}
+                    />
+                    <Provenance artifact={data._artifact} />
+                  </Card>
+                </div>
+              </>
+            )}
+          </Panel>
+        </div>
+      ) : null}
+
+      {tab === "factors" ? (
+        <Card title="Single-factor research" subtitle="Monthly cross-sections, next-open entry">
+          <Panel result={factors}>
+            {(data) => (
+              <>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <Stat label="Factor" value={data.factor_id} />
+                  <Stat
+                    label="Rank IC"
+                    value={formatSigned(data.rank_ic_mean, 4)}
+                    hint={`${data.num_sessions} rebalances`}
+                  />
+                  <Stat
+                    label="t-stat (Newey-West)"
+                    value={formatSigned(data.rank_ic_tstat_newey_west)}
+                    tone={Math.abs(data.rank_ic_tstat_newey_west) >= 2 ? "good" : "neutral"}
+                    hint={Math.abs(data.rank_ic_tstat_newey_west) >= 2 ? "significant" : "not significant"}
+                  />
+                  <Stat
+                    label="Breadth"
+                    value={formatNumber(data.breadth_mean, 1)}
+                    hint="names per cross-section"
+                  />
+                </div>
+
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <div>
+                    <h4 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
+                      Quantile portfolios (annualized, gross)
+                    </h4>
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-slate-800">
+                        {Object.entries(data.quantile_returns)
+                          .sort()
+                          .map(([bucket, value]) => (
+                            <tr key={bucket}>
+                              <td className="py-1.5 text-slate-400">{bucket}</td>
+                              <td className="py-1.5 text-right font-mono text-slate-200">
+                                {formatPercent(value)}
+                              </td>
+                            </tr>
+                          ))}
+                        <tr>
+                          <td className="py-1.5 text-slate-400">Monotonicity</td>
+                          <td className="py-1.5 text-right font-mono text-slate-200">
+                            {formatSigned(data.quantile_monotonicity)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div>
+                    <h4 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
+                      Rank IC by forward horizon
+                    </h4>
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-slate-800">
+                        {Object.entries(data.decay_profile).map(([horizon, value]) => (
+                          <tr key={horizon}>
+                            <td className="py-1.5 text-slate-400">{horizon}</td>
+                            <td className="py-1.5 text-right font-mono text-slate-200">
+                              {formatSigned(value, 4)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h3 className="font-semibold text-base">Key Alpha Attributes</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between py-1.5 border-b border-slate-800">
-                    <span className="text-slate-400">Rebalance Frequency</span>
-                    <span className="font-medium text-slate-200">Monthly</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-800">
-                    <span className="text-slate-400">Universe Size</span>
-                    <span className="font-medium text-slate-200">Top 30 Equal Weight</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-800">
-                    <span className="text-slate-400">Execution Friction</span>
-                    <span className="font-medium text-slate-200">5 bps slippage + $1 fee</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-800">
-                    <span className="text-slate-400">Break-Even Cost</span>
-                    <span className="font-medium text-emerald-400">42 bps</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                <p className="mt-4 text-xs text-slate-500">
+                  Status: <code className="text-slate-400">{data.diagnostic_label}</code>
+                </p>
+                <Provenance artifact={data._artifact} />
+              </>
+            )}
+          </Panel>
+        </Card>
+      ) : null}
 
-          {/* Tab 2: Walk-Forward ML */}
-          {activeTab === "ml" && (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-base flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-emerald-400" />
-                  Purged Walk-Forward Model Comparison (5 Folds)
-                </h3>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Award className="h-3.5 w-3.5" />
-                  Champion: RIDGE RANKER
-                </span>
-              </div>
-              <table className="w-full text-sm text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase">
-                    <th className="py-2.5 px-3">Model Paradigm</th>
-                    <th className="py-2.5 px-3">Mean Out-of-Sample Rank IC</th>
-                    <th className="py-2.5 px-3">IC Information Ratio (IR)</th>
-                    <th className="py-2.5 px-3">Q5 - Q1 Spread</th>
-                    <th className="py-2.5 px-3">Monotonicity</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  <tr className="hover:bg-slate-800/30">
-                    <td className="py-3 px-3 font-semibold text-slate-200">1. Heuristic Composite (Baseline)</td>
-                    <td className="py-3 px-3 text-slate-300">0.0521</td>
-                    <td className="py-3 px-3 text-slate-300">1.85</td>
-                    <td className="py-3 px-3 text-slate-300">+4.00%</td>
-                    <td className="py-3 px-3 text-emerald-400">Strict Monotonic</td>
-                  </tr>
-                  <tr className="bg-emerald-950/20 hover:bg-emerald-950/30">
-                    <td className="py-3 px-3 font-semibold text-emerald-400 flex items-center gap-1.5">
-                      2. Ridge Linear Ranker
-                      <span className="text-[10px] bg-emerald-500/20 px-1 rounded">CHAMPION</span>
-                    </td>
-                    <td className="py-3 px-3 font-bold text-emerald-400">0.0614</td>
-                    <td className="py-3 px-3 text-emerald-400 font-bold">2.45</td>
-                    <td className="py-3 px-3 text-emerald-400">+4.00%</td>
-                    <td className="py-3 px-3 text-emerald-400">Strict Monotonic</td>
-                  </tr>
-                  <tr className="hover:bg-slate-800/30">
-                    <td className="py-3 px-3 font-semibold text-slate-200">3. LightGBM Boosted Tree</td>
-                    <td className="py-3 px-3 text-slate-300">0.0582</td>
-                    <td className="py-3 px-3 text-slate-300">2.01</td>
-                    <td className="py-3 px-3 text-slate-300">+4.00%</td>
-                    <td className="py-3 px-3 text-emerald-400">Strict Monotonic</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
+      {tab === "models" ? (
+        <Card
+          title="Purged walk-forward comparison"
+          subtitle="Baseline keeps the slot unless a model clears it by more than the noise"
+        >
+          <Panel result={models}>
+            {(data) => (
+              <>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
+                      <th className="py-2 text-left">Model</th>
+                      <th className="py-2 text-right">OOS rank IC</th>
+                      <th className="py-2 text-right">IC IR</th>
+                      <th className="py-2 text-right">Q5 − Q1</th>
+                      <th className="py-2 text-right">Monotonic</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {data.reports.map((report) => (
+                      <tr
+                        key={report.model_name}
+                        className={
+                          report.model_name === data.champion_model ? "bg-emerald-950/20" : ""
+                        }
+                      >
+                        <td className="py-2 font-mono text-slate-200">{report.model_name}</td>
+                        <td className="py-2 text-right font-mono">
+                          {formatSigned(report.mean_ic, 4)}
+                        </td>
+                        <td className="py-2 text-right font-mono">
+                          {formatSigned(report.ic_ir)}
+                        </td>
+                        <td className="py-2 text-right font-mono">
+                          {formatSigned(report.top_bottom_spread, 4)}
+                        </td>
+                        <td className="py-2 text-right text-slate-400">
+                          {report.is_monotonic ? "yes" : "no"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-          {/* Tab 3: Validation */}
-          {activeTab === "validation" && (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-              <h3 className="font-semibold text-base flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                Hard Correctness &amp; Anti-Overfitting Defense Gates
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-950/60 rounded-lg border border-slate-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-sm">Lookahead Leakage Gate</span>
-                    <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                      PASS (0 Leaks)
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Verified strictly causal point-in-time boundary. Features at date t use only data known at or before t.
+                <p className="mt-4 text-sm text-slate-300">
+                  Champion: <span className="font-mono text-emerald-300">{data.champion_model}</span>
+                </p>
+                <p className="mt-1 text-xs text-slate-500">{data.champion_reason}</p>
+                {data.panel ? (
+                  <p className="mt-3 text-xs text-slate-500">
+                    {data.panel.monthly_cross_sections} monthly cross-sections,{" "}
+                    {data.panel.labelled_rows.toLocaleString()} labelled rows,{" "}
+                    {data.n_folds} folds, purge {data.panel.purge_periods} / embargo{" "}
+                    {data.panel.embargo_periods} periods. Label: {data.panel.label}.
                   </p>
-                </div>
-                <div className="p-4 bg-slate-950/60 rounded-lg border border-slate-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-sm">Sensitivity Surface Topology</span>
-                    <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                      PLATEAU (Robust)
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Broad parameter plateau detected across lookback window sweep [6M..12M]. No isolated overfit spikes.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+                ) : null}
+                <Provenance artifact={data._artifact} />
+              </>
+            )}
+          </Panel>
+        </Card>
+      ) : null}
 
-          {/* Tab 4: AI Campaigns */}
-          {activeTab === "campaigns" && (
-            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-              <h3 className="font-semibold text-base flex items-center gap-2">
-                <Bot className="h-4 w-4 text-emerald-400" />
-                Autonomous Research Campaign: Quality Filtering on Momentum
-              </h3>
-              <div className="space-y-3 font-mono text-xs">
-                <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                  <span className="text-sky-400 font-bold">[IDEA_GENERATOR]</span>: High ROE Quality stocks filter out low-quality momentum traps, yielding superior Information Ratio.
-                </div>
-                <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                  <span className="text-amber-400 font-bold">[FACTOR_ENGINEER]</span>: Formulated composite: 0.60 * momentum_12_1 + 0.40 * quality_roe. OOS Sharpe = 1.45.
-                </div>
-                <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                  <span className="text-rose-400 font-bold">[VALIDATION_CRITIC]</span>: 4-vector falsification passed. DSR = 0.91 &gt; 0.80 threshold. No fragility.
-                </div>
-                <div className="p-3 bg-emerald-950/30 rounded-lg border border-emerald-500/30 text-emerald-300">
-                  <span className="text-emerald-400 font-bold">[LEAD_STRATEGIST]</span>: Authoritative Verdict: VALIDATED. Promoted to PAPER_CANDIDATE.
-                </div>
-              </div>
-            </div>
-          )}
+      {tab === "validation" ? (
+        <Card title="Falsification report" subtitle="Hard gates, robustness sweeps, and verdict">
+          <Panel result={validation}>
+            {(data) => {
+              const failed = data.hard_gates.filter((gate) => !gate.passed);
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <Stat
+                      label="Verdict"
+                      value={data.verdict}
+                      tone={failed.length === 0 ? "good" : "bad"}
+                    />
+                    <Stat
+                      label="Deflated Sharpe p"
+                      value={formatNumber(data.multiple_testing.deflated_sharpe_p_value, 4)}
+                      hint={`${data.multiple_testing.n_trials} recorded trials`}
+                      tone={data.multiple_testing.is_statistically_significant ? "good" : "bad"}
+                    />
+                    <Stat
+                      label="Sharpe 95% CI"
+                      value={`${formatNumber(data.bootstrap.ci_lower)} … ${formatNumber(
+                        data.bootstrap.ci_upper,
+                      )}`}
+                      hint="stationary block bootstrap"
+                      tone={data.bootstrap.ci_lower > 0 ? "good" : "bad"}
+                    />
+                    <Stat
+                      label="Break-even cost"
+                      value={`${formatNumber(data.robustness.break_even_cost_bps, 0)} bps`}
+                      tone={data.robustness.is_cost_fragile ? "bad" : "good"}
+                    />
+                  </div>
+
+                  <div className="mt-6 grid gap-6 md:grid-cols-2">
+                    <div>
+                      <h4 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
+                        Hard gates
+                      </h4>
+                      <ul className="space-y-1 text-sm">
+                        {data.hard_gates.map((gate) => (
+                          <li key={gate.gate_type} className="flex justify-between gap-4">
+                            <span className="text-slate-400">{gate.gate_type}</span>
+                            <span className={gate.passed ? "text-emerald-400" : "text-rose-400"}>
+                              {gate.passed ? "pass" : gate.reason ?? "fail"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
+                        Portfolio size sweep ({data.robustness.top_k_topology})
+                      </h4>
+                      <table className="w-full text-sm">
+                        <tbody className="divide-y divide-slate-800">
+                          {data.robustness.top_k_cells.map((cell) => (
+                            <tr key={cell.top_k}>
+                              <td className="py-1.5 text-slate-400">top {cell.top_k}</td>
+                              <td className="py-1.5 text-right font-mono text-slate-200">
+                                Sharpe {formatSigned(cell.sharpe_ratio)}
+                              </td>
+                              <td className="py-1.5 text-right font-mono text-slate-400">
+                                {formatPercent(cell.cagr)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {data.robustness.ablations.length > 0 ? (
+                    <div className="mt-6">
+                      <h4 className="mb-2 text-xs uppercase tracking-wide text-slate-400">
+                        Factor ablations
+                      </h4>
+                      <table className="w-full text-sm">
+                        <tbody className="divide-y divide-slate-800">
+                          {data.robustness.ablations.map((record) => (
+                            <tr key={record.omitted_factor}>
+                              <td className="py-1.5 text-slate-400">
+                                without {record.omitted_factor}
+                              </td>
+                              <td className="py-1.5 text-right font-mono text-slate-200">
+                                Sharpe {formatSigned(record.sharpe_ratio)}
+                              </td>
+                              <td className="py-1.5 text-right font-mono text-slate-400">
+                                contribution {formatSigned(record.marginal_contribution_sharpe)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+
+                  <ul className="mt-4 space-y-1 text-xs text-slate-500">
+                    {data.reasons.map((reason) => (
+                      <li key={reason}>• {reason}</li>
+                    ))}
+                  </ul>
+                  <Provenance artifact={data._artifact} />
+                </>
+              );
+            }}
+          </Panel>
+        </Card>
+      ) : null}
+
+      {tab === "data" ? (
+        <div className="space-y-6">
+          <Card
+            title="Corporate action verification"
+            subtitle="Engine adjustment replayed against the provider's own total-return series"
+          >
+            <Panel result={verification}>
+              {(data) => (
+                <>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <Stat
+                      label="Instruments in tolerance"
+                      value={`${data.instruments_within_tolerance} / ${data.instruments}`}
+                      tone={
+                        data.instruments_within_tolerance === data.instruments ? "good" : "bad"
+                      }
+                    />
+                    <Stat
+                      label="Sessions compared"
+                      value={data.sessions_compared.toLocaleString()}
+                    />
+                    <Stat
+                      label="Actions replayed"
+                      value={`${data.splits_replayed} / ${data.dividends_replayed.toLocaleString()}`}
+                      hint="splits / dividends"
+                    />
+                    <Stat
+                      label="Median error"
+                      value={formatPercent(data.median_relative_error, 4)}
+                      hint={`worst ${formatPercent(data.max_relative_error, 4)}`}
+                    />
+                  </div>
+                  <Provenance artifact={data._artifact} />
+                </>
+              )}
+            </Panel>
+          </Card>
+
+          <Card title="Built datasets" subtitle="Present in this working directory">
+            <Panel result={datasets}>
+              {(data) =>
+                data.datasets.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No datasets built yet. Run{" "}
+                    <code className="text-slate-400">quantlab dataset build</code>.
+                  </p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
+                        <th className="py-2 text-left">Dataset</th>
+                        <th className="py-2 text-right">Equities</th>
+                        <th className="py-2 text-right">ETFs</th>
+                        <th className="py-2 text-right">Sectors</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {data.datasets.map((item) => (
+                        <tr key={item.dataset_id}>
+                          <td className="py-2 font-mono text-slate-200">{item.dataset_id}</td>
+                          <td className="py-2 text-right font-mono">{item.equities_count}</td>
+                          <td className="py-2 text-right font-mono">{item.etfs_count}</td>
+                          <td className="py-2 text-right font-mono">{item.sectors.length}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              }
+            </Panel>
+          </Card>
         </div>
-      </main>
-    </div>
+      ) : null}
+    </main>
   );
 }

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from quantlab.ml.contracts import MLDataset
 from quantlab.ml.evaluation import MLEvaluationEngine, ModelEvaluationReport
 from quantlab.ml.models.linear import RidgeRanker
-from quantlab.ml.models.tree import LightGBMRanker
+from quantlab.ml.models.tree import GradientBoostedRanker
 from quantlab.ml.preprocessing import TrainOnlyPreprocessor
 from quantlab.ml.splits import FoldSplit
 
@@ -33,8 +34,28 @@ class ModelComparisonResult:
         }
 
 
+# How much out-of-sample rank IC a model must add over the composite baseline before it
+# is worth the extra moving parts. Roughly the standard error of a rank IC estimated
+# from a few hundred monthly cross-sections, so smaller gaps are not distinguishable
+# from noise.
+MIN_INCREMENTAL_RANK_IC = 0.005
+
+
+def _zscore(values: Sequence[float]) -> list[float]:
+    """Standardize a cross-section so features with different units are comparable."""
+    n = len(values)
+    if n == 0:
+        return []
+    mean = sum(values) / n
+    variance = sum((v - mean) ** 2 for v in values) / n
+    if variance < 1e-18:
+        return [0.0] * n
+    sd = math.sqrt(variance)
+    return [(v - mean) / sd for v in values]
+
+
 class ModelComparisonRunner:
-    """Runs purged walk-forward comparison across Heuristic Composite, Ridge, and LightGBM."""
+    """Purged walk-forward comparison of the composite baseline against ranking models."""
 
     @classmethod
     def run_comparison(
@@ -42,19 +63,18 @@ class ModelComparisonRunner:
         dataset: MLDataset,
         folds: Sequence[FoldSplit],
         composite_weights: Mapping[str, float] | None = None,
+        model_names: Sequence[str] | None = None,
     ) -> ModelComparisonResult:
-        c_weights = composite_weights or {
-            "momentum_12_1": 0.50,
-            "value_composite": 0.30,
-            "quality_roe": 0.20,
-        }
+        feat_names = dataset.feature_names
+        # An equal-weight composite over standardized features is the honest baseline:
+        # it is what a researcher would write before reaching for a model, and every
+        # ML result has to beat it by enough to justify the extra machinery (spec 4.2).
+        c_weights = composite_weights or dict.fromkeys(feat_names, 1.0 / max(1, len(feat_names)))
 
         # Predictions container for each model across test folds
         composite_evals: list[tuple[Sequence[float], Sequence[float]]] = []
         ridge_evals: list[tuple[Sequence[float], Sequence[float]]] = []
-        lgbm_evals: list[tuple[Sequence[float], Sequence[float]]] = []
-
-        feat_names = dataset.feature_names
+        gbdt_evals: list[tuple[Sequence[float], Sequence[float]]] = []
 
         for fold in folds:
             train_rows = [
@@ -81,8 +101,7 @@ class ModelComparisonRunner:
             # Fit Ridge
             ridge_model = RidgeRanker.fit(X_train_trans, y_train, alpha=1.0)
 
-            # Fit LightGBM
-            lgbm_model = LightGBMRanker.fit(
+            gbdt_model = GradientBoostedRanker.fit(
                 X_train_trans, y_train, n_estimators=20, learning_rate=0.05, max_depth=3
             )
 
@@ -96,14 +115,18 @@ class ModelComparisonRunner:
                 X_test_s = [list(r.features) for r in s_rows]
                 y_test_s = [float(r.label or 0.0) for r in s_rows]
 
-                # 1. Composite heuristic predictions
-                c_preds: list[float] = []
-                for r in s_rows:
-                    score = sum(
-                        float(r.features[i]) * c_weights.get(feat_names[i], 1.0 / len(feat_names))
+                # 1. Composite baseline, standardized within the cross-section so a
+                # factor measured in percent cannot outvote one measured in ratio terms.
+                standardized = [
+                    _zscore([float(r.features[i]) for r in s_rows]) for i in range(len(feat_names))
+                ]
+                c_preds = [
+                    sum(
+                        standardized[i][row_idx] * c_weights.get(feat_names[i], 0.0)
                         for i in range(len(feat_names))
                     )
-                    c_preds.append(score)
+                    for row_idx in range(len(s_rows))
+                ]
                 composite_evals.append((c_preds, y_test_s))
 
                 # 2. Ridge predictions
@@ -111,30 +134,43 @@ class ModelComparisonRunner:
                 r_preds = ridge_model.predict(X_test_trans)
                 ridge_evals.append((r_preds, y_test_s))
 
-                # 3. LightGBM predictions
-                l_preds = lgbm_model.predict(X_test_trans)
-                lgbm_evals.append((l_preds, y_test_s))
+                # 3. Gradient boosted tree predictions
+                g_preds = gbdt_model.predict(X_test_trans)
+                gbdt_evals.append((g_preds, y_test_s))
 
         # Generate reports
         rep_comp = MLEvaluationEngine.evaluate_model("composite", composite_evals)
         rep_ridge = MLEvaluationEngine.evaluate_model("ridge", ridge_evals)
-        rep_lgbm = MLEvaluationEngine.evaluate_model("lightgbm", lgbm_evals)
+        rep_gbdt = MLEvaluationEngine.evaluate_model("gbdt", gbdt_evals)
 
-        reports = (rep_comp, rep_ridge, rep_lgbm)
+        available = {"composite": rep_comp, "ridge": rep_ridge, "gbdt": rep_gbdt}
+        selected = tuple(model_names) if model_names else tuple(available)
+        reports = tuple(available[name] for name in selected if name in available) or (
+            rep_comp,
+            rep_ridge,
+            rep_gbdt,
+        )
 
-        # Champion Selection Rule:
-        # If ML (Ridge/LGBM) has Rank IC > composite IC + 0.005, promote ML champion
-        # Otherwise, Composite remains champion (defending against complexity theater)
+        # The baseline keeps the title unless a model beats it by a margin larger than
+        # the noise in the estimate. Ranking by raw score alone would crown whichever
+        # model got luckier on the test folds and call it a finding (spec 4.2, 4.14).
         best_report = max(reports, key=lambda r: r.mean_ic)
-        if best_report.model_name != "composite" and best_report.mean_ic > rep_comp.mean_ic + 0.005:
+        margin = MIN_INCREMENTAL_RANK_IC
+        beats_baseline = best_report.mean_ic > rep_comp.mean_ic + margin
+        if best_report.model_name != "composite" and beats_baseline:
             champion = best_report.model_name
             reason = (
-                f"Demonstrated incremental out-of-sample Rank IC of "
-                f"{best_report.mean_ic:.4f} vs composite {rep_comp.mean_ic:.4f}"
+                f"{best_report.model_name} beat the composite baseline out of sample by "
+                f"{best_report.mean_ic - rep_comp.mean_ic:+.4f} rank IC "
+                f"({best_report.mean_ic:.4f} vs {rep_comp.mean_ic:.4f}), clearing the "
+                f"{margin:.3f} margin required to justify the added complexity"
             )
         else:
             champion = "composite"
-            reason = "Simple heuristic composite selected as champion due to superior parsimony"
+            reason = (
+                f"No model cleared the composite baseline ({rep_comp.mean_ic:.4f} rank IC) "
+                f"by the {margin:.3f} margin required, so the simpler model keeps the slot"
+            )
 
         payload = {
             "champion": champion,

@@ -1,0 +1,923 @@
+{
+  "fixture": "us_research",
+  "instruments": 101,
+  "sessions_compared": 730370,
+  "splits_replayed": 239,
+  "dividends_replayed": 10616,
+  "median_relative_error": 1.4059347488509249e-07,
+  "max_relative_error": 0.004781242981750465,
+  "instruments_within_tolerance": 101,
+  "median_tolerance": 0.005,
+  "worst_case_tolerance": 0.05,
+  "per_instrument": [
+    {
+      "symbol": "AAPL",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 54,
+      "median_rel_error": 1.7548311582503116e-07,
+      "max_rel_error": 8.448951004596923e-06,
+      "passed": true
+    },
+    {
+      "symbol": "ABT",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 122,
+      "median_rel_error": 2.457188196215346e-07,
+      "max_rel_error": 0.004781242981750465,
+      "passed": true
+    },
+    {
+      "symbol": "ADBE",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 43,
+      "median_rel_error": 0.0,
+      "max_rel_error": 6.135295536227193e-07,
+      "passed": true
+    },
+    {
+      "symbol": "AEP",
+      "sessions": 7552,
+      "splits": 0,
+      "dividends": 120,
+      "median_rel_error": 1.4400018127535925e-07,
+      "max_rel_error": 1.109422676313546e-06,
+      "passed": true
+    },
+    {
+      "symbol": "AMAT",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 79,
+      "median_rel_error": 1.3980313707877993e-07,
+      "max_rel_error": 1.1842883589405995e-06,
+      "passed": true
+    },
+    {
+      "symbol": "AMGN",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 54,
+      "median_rel_error": 1.1514475395994708e-07,
+      "max_rel_error": 8.0386216430407e-07,
+      "passed": true
+    },
+    {
+      "symbol": "AMZN",
+      "sessions": 6953,
+      "splits": 4,
+      "dividends": 0,
+      "median_rel_error": 0.0,
+      "max_rel_error": 6.179897183987444e-08,
+      "passed": true
+    },
+    {
+      "symbol": "APD",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 119,
+      "median_rel_error": 1.31528955287012e-07,
+      "max_rel_error": 1.0940811128312865e-06,
+      "passed": true
+    },
+    {
+      "symbol": "AVGO",
+      "sessions": 3877,
+      "splits": 1,
+      "dividends": 57,
+      "median_rel_error": 1.02876502120208e-07,
+      "max_rel_error": 1.0384108285372889e-06,
+      "passed": true
+    },
+    {
+      "symbol": "AXP",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 119,
+      "median_rel_error": 1.4104929108159583e-07,
+      "max_rel_error": 1.3316235852061634e-06,
+      "passed": true
+    },
+    {
+      "symbol": "BA",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 101,
+      "median_rel_error": 9.668085074740192e-08,
+      "max_rel_error": 8.661268819695512e-07,
+      "passed": true
+    },
+    {
+      "symbol": "BAC",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 2.0715965974880496e-07,
+      "max_rel_error": 1.1313935124534926e-06,
+      "passed": true
+    },
+    {
+      "symbol": "BMY",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 119,
+      "median_rel_error": 1.8962731259974568e-07,
+      "max_rel_error": 1.1911368174114314e-06,
+      "passed": true
+    },
+    {
+      "symbol": "C",
+      "sessions": 7552,
+      "splits": 7,
+      "dividends": 113,
+      "median_rel_error": 1.3857460688509563e-07,
+      "max_rel_error": 1.1995311221636876e-06,
+      "passed": true
+    },
+    {
+      "symbol": "CAT",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.3938637794542543e-07,
+      "max_rel_error": 1.0656782818484732e-06,
+      "passed": true
+    },
+    {
+      "symbol": "CL",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.591841396811466e-07,
+      "max_rel_error": 1.0346848597854865e-06,
+      "passed": true
+    },
+    {
+      "symbol": "CMCSA",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 84,
+      "median_rel_error": 2.029373589979736e-07,
+      "max_rel_error": 1.1575885347312555e-06,
+      "passed": true
+    },
+    {
+      "symbol": "COP",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 128,
+      "median_rel_error": 1.4218550338331038e-07,
+      "max_rel_error": 1.0105630769723926e-06,
+      "passed": true
+    },
+    {
+      "symbol": "COST",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 88,
+      "median_rel_error": 1.7583820853175688e-07,
+      "max_rel_error": 1.1513935749137293e-06,
+      "passed": true
+    },
+    {
+      "symbol": "CRM",
+      "sessions": 5167,
+      "splits": 1,
+      "dividends": 4,
+      "median_rel_error": 6.164450886057844e-08,
+      "max_rel_error": 4.155144258385202e-07,
+      "passed": true
+    },
+    {
+      "symbol": "CSCO",
+      "sessions": 7552,
+      "splits": 5,
+      "dividends": 55,
+      "median_rel_error": 1.26186069608275e-07,
+      "max_rel_error": 9.523550229044324e-07,
+      "passed": true
+    },
+    {
+      "symbol": "CVX",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 120,
+      "median_rel_error": 2.5164919557204365e-07,
+      "max_rel_error": 1.2527715222871344e-06,
+      "passed": true
+    },
+    {
+      "symbol": "D",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 120,
+      "median_rel_error": 1.2476579109151048e-07,
+      "max_rel_error": 1.0888445462362765e-06,
+      "passed": true
+    },
+    {
+      "symbol": "DE",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.4059347488509249e-07,
+      "max_rel_error": 9.610659298600861e-07,
+      "passed": true
+    },
+    {
+      "symbol": "DIA",
+      "sessions": 6782,
+      "splits": 0,
+      "dividends": 319,
+      "median_rel_error": 4.5928547964908944e-07,
+      "max_rel_error": 2.175264554851317e-06,
+      "passed": true
+    },
+    {
+      "symbol": "DIS",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 46,
+      "median_rel_error": 7.99424731208147e-08,
+      "max_rel_error": 5.808437372395204e-07,
+      "passed": true
+    },
+    {
+      "symbol": "DUK",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.4523590053513509e-07,
+      "max_rel_error": 1.1037357661736526e-06,
+      "passed": true
+    },
+    {
+      "symbol": "ECL",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.734912382886218e-07,
+      "max_rel_error": 4.4112944167863556e-05,
+      "passed": true
+    },
+    {
+      "symbol": "EMR",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.455214835016931e-07,
+      "max_rel_error": 1.1365285649484326e-06,
+      "passed": true
+    },
+    {
+      "symbol": "EOG",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 128,
+      "median_rel_error": 1.4268251505072178e-07,
+      "max_rel_error": 1.006875592766049e-06,
+      "passed": true
+    },
+    {
+      "symbol": "F",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 93,
+      "median_rel_error": 1.2708764520698186e-07,
+      "max_rel_error": 9.889611424738891e-07,
+      "passed": true
+    },
+    {
+      "symbol": "FCX",
+      "sessions": 7422,
+      "splits": 1,
+      "dividends": 94,
+      "median_rel_error": 1.5378750013812808e-07,
+      "max_rel_error": 9.74306933026208e-07,
+      "passed": true
+    },
+    {
+      "symbol": "GE",
+      "sessions": 7552,
+      "splits": 6,
+      "dividends": 121,
+      "median_rel_error": 1.892928505449671e-07,
+      "max_rel_error": 1.1475482002772972e-06,
+      "passed": true
+    },
+    {
+      "symbol": "GILD",
+      "sessions": 7552,
+      "splits": 5,
+      "dividends": 39,
+      "median_rel_error": 1.2966970463809298e-07,
+      "max_rel_error": 2.9935822410901928e-06,
+      "passed": true
+    },
+    {
+      "symbol": "GIS",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.5362825509852325e-07,
+      "max_rel_error": 1.1041832327633189e-06,
+      "passed": true
+    },
+    {
+      "symbol": "GLD",
+      "sessions": 5063,
+      "splits": 0,
+      "dividends": 0,
+      "median_rel_error": 0.0,
+      "max_rel_error": 0.0,
+      "passed": true
+    },
+    {
+      "symbol": "GOOGL",
+      "sessions": 5127,
+      "splits": 2,
+      "dividends": 3,
+      "median_rel_error": 8.616398156354521e-08,
+      "max_rel_error": 4.0201602612028655e-07,
+      "passed": true
+    },
+    {
+      "symbol": "GS",
+      "sessions": 6458,
+      "splits": 0,
+      "dividends": 103,
+      "median_rel_error": 1.5880775802537647e-07,
+      "max_rel_error": 1.0680008365108304e-06,
+      "passed": true
+    },
+    {
+      "symbol": "HAL",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.2717759928109302e-07,
+      "max_rel_error": 9.36452747863241e-07,
+      "passed": true
+    },
+    {
+      "symbol": "HD",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 121,
+      "median_rel_error": 1.3119261879675299e-07,
+      "max_rel_error": 1.192339987604649e-06,
+      "passed": true
+    },
+    {
+      "symbol": "HON",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 120,
+      "median_rel_error": 1.5446552861232929e-07,
+      "max_rel_error": 9.963696857875832e-07,
+      "passed": true
+    },
+    {
+      "symbol": "HPQ",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 121,
+      "median_rel_error": 1.408662608793272e-07,
+      "max_rel_error": 1.0450452106823564e-06,
+      "passed": true
+    },
+    {
+      "symbol": "IBM",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.3690099560279552e-07,
+      "max_rel_error": 1.1689049172673574e-06,
+      "passed": true
+    },
+    {
+      "symbol": "INTC",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 119,
+      "median_rel_error": 1.1470716901870447e-07,
+      "max_rel_error": 9.894136339624126e-07,
+      "passed": true
+    },
+    {
+      "symbol": "ITW",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.2591259855695293e-07,
+      "max_rel_error": 9.866329452919225e-07,
+      "passed": true
+    },
+    {
+      "symbol": "IWM",
+      "sessions": 6188,
+      "splits": 1,
+      "dividends": 100,
+      "median_rel_error": 1.2116377419446822e-07,
+      "max_rel_error": 1.2448360800243867e-06,
+      "passed": true
+    },
+    {
+      "symbol": "JNJ",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.2974537496760455e-07,
+      "max_rel_error": 1.0895042165625001e-06,
+      "passed": true
+    },
+    {
+      "symbol": "JPM",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 119,
+      "median_rel_error": 1.5807175883925497e-07,
+      "max_rel_error": 1.2756806660659319e-06,
+      "passed": true
+    },
+    {
+      "symbol": "KMB",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.2243146917362164e-07,
+      "max_rel_error": 9.8931223983672e-07,
+      "passed": true
+    },
+    {
+      "symbol": "KO",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.6558050568851768e-07,
+      "max_rel_error": 3.331569227559205e-05,
+      "passed": true
+    },
+    {
+      "symbol": "LLY",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.666219286697887e-07,
+      "max_rel_error": 1.2366337262644084e-06,
+      "passed": true
+    },
+    {
+      "symbol": "LMT",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.2935251482416022e-07,
+      "max_rel_error": 9.472956759431836e-07,
+      "passed": true
+    },
+    {
+      "symbol": "LOW",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.555684738267871e-07,
+      "max_rel_error": 1.0856836968004135e-06,
+      "passed": true
+    },
+    {
+      "symbol": "MCD",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 96,
+      "median_rel_error": 1.2634181769391123e-07,
+      "max_rel_error": 8.620005759309029e-07,
+      "passed": true
+    },
+    {
+      "symbol": "MDT",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.3337503482872653e-07,
+      "max_rel_error": 1.0095979166563983e-06,
+      "passed": true
+    },
+    {
+      "symbol": "META",
+      "sessions": 3175,
+      "splits": 0,
+      "dividends": 4,
+      "median_rel_error": 1.7160979225768108e-07,
+      "max_rel_error": 4.7493913964273156e-07,
+      "passed": true
+    },
+    {
+      "symbol": "MMM",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.3723377991866696e-07,
+      "max_rel_error": 1.0903614853352708e-06,
+      "passed": true
+    },
+    {
+      "symbol": "MO",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 122,
+      "median_rel_error": 1.9511744465753467e-07,
+      "max_rel_error": 1.5666604905215684e-06,
+      "passed": true
+    },
+    {
+      "symbol": "MRK",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.78764726409889e-07,
+      "max_rel_error": 1.1854526819042592e-06,
+      "passed": true
+    },
+    {
+      "symbol": "MS",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.4236443048950464e-07,
+      "max_rel_error": 1.01366720370223e-06,
+      "passed": true
+    },
+    {
+      "symbol": "MSFT",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 84,
+      "median_rel_error": 1.2981963472482163e-07,
+      "max_rel_error": 1.0258625918146182e-06,
+      "passed": true
+    },
+    {
+      "symbol": "MU",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 20,
+      "median_rel_error": 8.132486848410423e-08,
+      "max_rel_error": 7.564878263303455e-07,
+      "passed": true
+    },
+    {
+      "symbol": "NEE",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.7490261618159224e-07,
+      "max_rel_error": 1.5703125504893714e-06,
+      "passed": true
+    },
+    {
+      "symbol": "NEM",
+      "sessions": 7552,
+      "splits": 0,
+      "dividends": 121,
+      "median_rel_error": 1.3603796090174178e-07,
+      "max_rel_error": 1.036594330600459e-06,
+      "passed": true
+    },
+    {
+      "symbol": "NFLX",
+      "sessions": 5691,
+      "splits": 2,
+      "dividends": 0,
+      "median_rel_error": 0.0,
+      "max_rel_error": 0.0,
+      "passed": true
+    },
+    {
+      "symbol": "NKE",
+      "sessions": 7552,
+      "splits": 5,
+      "dividends": 120,
+      "median_rel_error": 1.3951755639524727e-07,
+      "max_rel_error": 1.053998673826099e-06,
+      "passed": true
+    },
+    {
+      "symbol": "NSC",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 121,
+      "median_rel_error": 1.6466196619391605e-07,
+      "max_rel_error": 1.1242883896723264e-06,
+      "passed": true
+    },
+    {
+      "symbol": "NVDA",
+      "sessions": 6528,
+      "splits": 6,
+      "dividends": 49,
+      "median_rel_error": 4.570023674125885e-07,
+      "max_rel_error": 2.382985929251076e-05,
+      "passed": true
+    },
+    {
+      "symbol": "O",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 358,
+      "median_rel_error": 2.456875084565127e-07,
+      "max_rel_error": 1.860010731306266e-06,
+      "passed": true
+    },
+    {
+      "symbol": "ORCL",
+      "sessions": 7552,
+      "splits": 6,
+      "dividends": 62,
+      "median_rel_error": 1.2296326086486808e-07,
+      "max_rel_error": 7.964335856726171e-07,
+      "passed": true
+    },
+    {
+      "symbol": "OXY",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.514594797099561e-07,
+      "max_rel_error": 1.360543543425598e-06,
+      "passed": true
+    },
+    {
+      "symbol": "PEP",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 121,
+      "median_rel_error": 1.4225156708221605e-07,
+      "max_rel_error": 1.0574376483133622e-06,
+      "passed": true
+    },
+    {
+      "symbol": "PFE",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 120,
+      "median_rel_error": 1.3948279639026234e-07,
+      "max_rel_error": 1.1731240659098262e-06,
+      "passed": true
+    },
+    {
+      "symbol": "PG",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.435337306301262e-07,
+      "max_rel_error": 9.199459496287151e-07,
+      "passed": true
+    },
+    {
+      "symbol": "PNC",
+      "sessions": 7552,
+      "splits": 0,
+      "dividends": 120,
+      "median_rel_error": 1.2918526522904563e-07,
+      "max_rel_error": 1.1647395755065627e-06,
+      "passed": true
+    },
+    {
+      "symbol": "PSA",
+      "sessions": 7552,
+      "splits": 0,
+      "dividends": 122,
+      "median_rel_error": 1.5750911477311344e-07,
+      "max_rel_error": 1.049691026659017e-06,
+      "passed": true
+    },
+    {
+      "symbol": "QCOM",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 89,
+      "median_rel_error": 1.3617678322423262e-07,
+      "max_rel_error": 1.3545619311989047e-06,
+      "passed": true
+    },
+    {
+      "symbol": "QQQ",
+      "sessions": 6496,
+      "splits": 1,
+      "dividends": 83,
+      "median_rel_error": 1.259254675655676e-07,
+      "max_rel_error": 8.658236479758929e-07,
+      "passed": true
+    },
+    {
+      "symbol": "SBUX",
+      "sessions": 7552,
+      "splits": 5,
+      "dividends": 59,
+      "median_rel_error": 1.5738627837913923e-07,
+      "max_rel_error": 1.5863918892490305e-06,
+      "passed": true
+    },
+    {
+      "symbol": "SCHW",
+      "sessions": 7552,
+      "splits": 6,
+      "dividends": 120,
+      "median_rel_error": 1.31042754661004e-07,
+      "max_rel_error": 1.3369270729109695e-06,
+      "passed": true
+    },
+    {
+      "symbol": "SHW",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.5924839057855033e-07,
+      "max_rel_error": 1.2285714746779182e-06,
+      "passed": true
+    },
+    {
+      "symbol": "SLB",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.2893894707950016e-07,
+      "max_rel_error": 1.0675354966746577e-06,
+      "passed": true
+    },
+    {
+      "symbol": "SO",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 120,
+      "median_rel_error": 1.4827420025252236e-07,
+      "max_rel_error": 1.160802009628393e-06,
+      "passed": true
+    },
+    {
+      "symbol": "SPG",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 123,
+      "median_rel_error": 5.235686214677353e-07,
+      "max_rel_error": 2.524156448586002e-05,
+      "passed": true
+    },
+    {
+      "symbol": "SPY",
+      "sessions": 7552,
+      "splits": 0,
+      "dividends": 121,
+      "median_rel_error": 1.3988640749727063e-07,
+      "max_rel_error": 1.0227597453283502e-06,
+      "passed": true
+    },
+    {
+      "symbol": "SYY",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.6507051858188846e-07,
+      "max_rel_error": 1.0874470065271529e-06,
+      "passed": true
+    },
+    {
+      "symbol": "T",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.6335942757710873e-07,
+      "max_rel_error": 1.0627972909460946e-06,
+      "passed": true
+    },
+    {
+      "symbol": "TGT",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.5193989382325965e-07,
+      "max_rel_error": 1.2937930629501468e-06,
+      "passed": true
+    },
+    {
+      "symbol": "TLT",
+      "sessions": 5645,
+      "splits": 0,
+      "dividends": 268,
+      "median_rel_error": 2.11929880916167e-07,
+      "max_rel_error": 1.4731855549580902e-06,
+      "passed": true
+    },
+    {
+      "symbol": "TMO",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 55,
+      "median_rel_error": 1.8731242671564979e-07,
+      "max_rel_error": 9.53851554095509e-07,
+      "passed": true
+    },
+    {
+      "symbol": "TRV",
+      "sessions": 7552,
+      "splits": 1,
+      "dividends": 121,
+      "median_rel_error": 1.417469795947883e-07,
+      "max_rel_error": 1.033030877924845e-06,
+      "passed": true
+    },
+    {
+      "symbol": "TSLA",
+      "sessions": 3652,
+      "splits": 2,
+      "dividends": 0,
+      "median_rel_error": 0.0,
+      "max_rel_error": 0.0,
+      "passed": true
+    },
+    {
+      "symbol": "TXN",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 119,
+      "median_rel_error": 1.7463790650220288e-07,
+      "max_rel_error": 1.4211169759541933e-06,
+      "passed": true
+    },
+    {
+      "symbol": "UNH",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 75,
+      "median_rel_error": 1.2395679951367944e-07,
+      "max_rel_error": 7.885085894896838e-07,
+      "passed": true
+    },
+    {
+      "symbol": "UNP",
+      "sessions": 7552,
+      "splits": 3,
+      "dividends": 120,
+      "median_rel_error": 1.2650603412888787e-07,
+      "max_rel_error": 1.0506516224124144e-06,
+      "passed": true
+    },
+    {
+      "symbol": "USB",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.2720432580381001e-07,
+      "max_rel_error": 1.091788360896827e-06,
+      "passed": true
+    },
+    {
+      "symbol": "V",
+      "sessions": 4226,
+      "splits": 1,
+      "dividends": 66,
+      "median_rel_error": 1.0345019532706084e-07,
+      "max_rel_error": 8.035232816307533e-07,
+      "passed": true
+    },
+    {
+      "symbol": "VZ",
+      "sessions": 7552,
+      "splits": 4,
+      "dividends": 120,
+      "median_rel_error": 1.5557258068274397e-07,
+      "max_rel_error": 1.1764863389350404e-06,
+      "passed": true
+    },
+    {
+      "symbol": "WFC",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 122,
+      "median_rel_error": 1.309458449680395e-07,
+      "max_rel_error": 1.040024921615959e-06,
+      "passed": true
+    },
+    {
+      "symbol": "WMT",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 120,
+      "median_rel_error": 1.3409597287057376e-07,
+      "max_rel_error": 8.570444131090132e-07,
+      "passed": true
+    },
+    {
+      "symbol": "XOM",
+      "sessions": 7552,
+      "splits": 2,
+      "dividends": 121,
+      "median_rel_error": 1.2899509178979082e-07,
+      "max_rel_error": 9.103073581020588e-07,
+      "passed": true
+    }
+  ]
+}

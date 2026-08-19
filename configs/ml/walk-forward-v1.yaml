@@ -1,29 +1,35 @@
 walk_forward_id: "walk-forward-v1"
-description: "Purged and Embargoed Temporal Walk-Forward Cross Validation Specification"
+description: >-
+  Purged and embargoed walk-forward specification. Units are monthly rebalance periods,
+  not trading days, because the panel's observation unit is the monthly cross-section
+  (spec 4.3). Random shuffled splits are prohibited for authoritative evaluation.
 
 split:
   window_type: "expanding"
-  min_train_sessions: 252
-  train_window_sessions: 504
-  test_window_sessions: 63
-  step_sessions: 63
-  purge_sessions: 21
-  embargo_sessions: 5
+  # Five years of monthly cross-sections before the first prediction. Anything shorter
+  # trains a cross-sectional ranker on too few regimes to say anything about the next.
+  min_train_sessions: 60
+  # One year of held-out months per fold, stepping a year at a time, so the folds tile
+  # the history without overlapping test blocks.
+  test_window_sessions: 12
+  step_sessions: 12
+  # The label spans one rebalance forward, so the last training month before a test
+  # block has a label that resolves inside it. Purge that month, then embargo one more
+  # to break the serial correlation that survives the purge.
+  purge_sessions: 1
+  embargo_sessions: 1
 
 models:
   composite:
     type: "heuristic"
-    factor_weights:
-      momentum_12_1: 0.50
-      value_composite: 0.30
-      quality_roe: 0.20
+    description: "Equal weight over standardized features; the baseline ML must beat"
   ridge:
     type: "linear"
     alpha: 1.0
     normalize: true
-  lightgbm:
+  gbdt:
     type: "tree"
-    n_estimators: 100
+    description: "From-scratch gradient boosted trees, not LightGBM"
+    n_estimators: 20
     learning_rate: 0.05
     max_depth: 3
-    num_leaves: 8

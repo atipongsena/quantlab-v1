@@ -47,6 +47,25 @@ def run_backtest(args: argparse.Namespace) -> int:
     print(f"Total Turnover     : {m.total_turnover * 100:.1f}%")
     print(f"Total Fees         : ${m.total_fees:,.2f}")
     print(f"Total Slippage     : ${m.total_slippage:,.2f}")
+
+    comparison = service.last_benchmark_comparison
+    if comparison is not None:
+        print("-" * 70)
+        print(f"Versus {comparison.benchmark_symbol} (buy and hold, total return)")
+        print(
+            f"  Benchmark CAGR   : {comparison.benchmark_cagr * 100:+.2f}%   "
+            f"Strategy CAGR: {comparison.strategy_cagr * 100:+.2f}%"
+        )
+        print(
+            f"  Beta             : {comparison.beta:.2f}        "
+            f"Correlation : {comparison.correlation:.2f}"
+        )
+        print(f"  Annualized alpha : {comparison.annualized_alpha * 100:+.2f}% (Jensen)")
+        print(
+            f"  Tracking error   : {comparison.tracking_error * 100:.2f}%   "
+            f"Information ratio: {comparison.information_ratio:+.2f}"
+        )
+
     print("=" * 70)
     print(f"Status: PASS [Hash: {result.content_hash[:16]}...]")
 

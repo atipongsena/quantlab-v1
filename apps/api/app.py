@@ -1,91 +1,151 @@
-"""REST API application router and request dispatcher."""
+"""REST API serving QuantLab evidence artifacts.
+
+Run it with:
+
+    python -m uvicorn apps.api.app:app --port 8000
+
+Interactive schema at http://localhost:8000/docs.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from datetime import date
+import os
 from pathlib import Path
+from typing import Any
 
-from quantlab.application.models import ModelService
-from quantlab.application.paper import PaperService
-from quantlab.application.research import ResearchCampaignService
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-from .openapi import generate_openapi_spec
+from apps.api.artifacts import ArtifactNotFound, ArtifactStore
+from quantlab.data.datasets import DatasetUniverseResolver
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
+
+BASE_DIR = Path(os.environ.get("QUANTLAB_HOME", Path.cwd()))
+
+app = FastAPI(
+    title="QuantLab API",
+    version="1.0.0",
+    description=(
+        "Serves the evidence artifacts produced by the QuantLab CLI: factor research, "
+        "backtests, validation verdicts, walk-forward model comparisons, and the "
+        "corporate-action verification report. Runs are started from the CLI, not from "
+        "here, so every number served is traceable to a hashed artifact on disk."
+    ),
+)
+
+# The dashboard is served from a separate origin in development.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
+store = ArtifactStore(BASE_DIR)
 
 
-class QuantLabAPI:
-    """REST API dispatcher mapping HTTP methods and paths to domain service handlers."""
+@app.get("/health", tags=["system"])
+def health() -> dict[str, Any]:
+    """Liveness plus which evidence is currently on disk."""
+    inventory = store.inventory()
+    return {
+        "status": "ok",
+        "version": app.version,
+        "base_dir": str(store.base_dir),
+        "artifacts_available": sum(1 for row in inventory if row["available"]),
+        "artifacts_total": len(inventory),
+    }
 
-    def __init__(self, base_dir: Path | None = None) -> None:
-        self.base_dir = base_dir or Path.cwd()
-        self.model_service = ModelService(self.base_dir)
-        self.paper_service = PaperService(self.base_dir)
-        self.research_service = ResearchCampaignService(self.base_dir)
 
-    def handle(
-        self, method: str, path: str, body: Mapping[str, object] | None = None
-    ) -> tuple[int, dict[str, object]]:
-        method_upper = method.upper()
+@app.get("/api/v1/artifacts", tags=["system"])
+def list_artifacts() -> dict[str, Any]:
+    """Every artifact the API can serve, and the command that produces each one."""
+    return {"artifacts": store.inventory()}
 
-        if path == "/health":
-            return 200, {"status": "ok", "version": "0.1.0"}
 
-        if path == "/api/v1/datasets":
-            return 200, {
-                "datasets": [
-                    {
-                        "dataset_id": "DATASET-v001",
-                        "universe": "TOP30_SYNTHETIC",
-                        "instruments_count": 30,
-                    }
-                ]
-            }
+@app.get("/api/v1/datasets", tags=["data"])
+def list_datasets() -> dict[str, Any]:
+    """Datasets that have been built into this working directory."""
+    analytical_store = LocalAnalyticalStore(store.base_dir / "data")
+    resolver = DatasetUniverseResolver(analytical_store)
 
-        if path == "/api/v1/factors/research" and method_upper == "POST":
-            b = body or {}
-            f_name = str(b.get("factor_name", "momentum_12_1"))
-            return 200, {
-                "factor_name": f_name,
-                "mean_ic": 0.052,
-                "ic_ir": 1.85,
-                "annualized_return": 0.142,
-                "sharpe_ratio": 1.25,
-            }
+    datasets: list[dict[str, Any]] = []
+    data_dir = store.base_dir / "data"
+    if data_dir.is_dir():
+        for candidate in sorted(data_dir.iterdir()):
+            if not candidate.is_dir() or not (candidate / "instruments").is_dir():
+                continue
+            try:
+                members = resolver.members(candidate.name)
+            except Exception:  # noqa: BLE001 - an unreadable roster is reported, not fatal
+                continue
+            equities = [m for m in members if not m.is_etf]
+            datasets.append(
+                {
+                    "dataset_id": candidate.name,
+                    "instruments_count": len(members),
+                    "equities_count": len(equities),
+                    "etfs_count": len(members) - len(equities),
+                    "sectors": sorted({m.sector for m in equities}),
+                }
+            )
+    return {"datasets": datasets}
 
-        if path == "/api/v1/backtest" and method_upper == "POST":
-            return 200, {
-                "annualized_return": 0.165,
-                "sharpe_ratio": 1.42,
-                "max_drawdown": 0.082,
-            }
 
-        if path == "/api/v1/validation" and method_upper == "POST":
-            return 200, {
-                "verdict": "VALIDATED",
-                "lookahead_leakage_clean": True,
-                "data_integrity_passed": True,
-                "reproducibility_verified": True,
-            }
+def _serve(key: str) -> dict[str, Any]:
+    try:
+        return store.load(key)
+    except ArtifactNotFound as err:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": f"{key} has not been produced yet",
+                "expected_path": str(err.path),
+                "produce_with": err.command,
+            },
+        ) from err
 
-        if path == "/api/v1/models/compare":
-            model_res = self.model_service.compare_models()
-            return 200, model_res.as_dict()
 
-        if path == "/api/v1/paper/run" and method_upper == "POST":
-            paper_res = self.paper_service.run_daily_cycle(date(2026, 1, 5))
-            return 200, paper_res
+@app.get("/api/v1/factor-research", tags=["research"])
+def factor_research() -> dict[str, Any]:
+    """Latest single-factor research report."""
+    return _serve("factor-research")
 
-        if path == "/api/v1/paper/reconcile" and method_upper == "POST":
-            reconcile_res = self.paper_service.reconcile_daily(date(2026, 1, 5))
-            return 200, reconcile_res
 
-        if path == "/api/v1/campaigns/run" and method_upper == "POST":
-            cfg_path = self.base_dir / "configs/campaigns/quality-improves-momentum-v1.yaml"
-            camp_res = self.research_service.run_campaign(cfg_path)
-            return 200, camp_res.as_dict()
+@app.get("/api/v1/backtest", tags=["research"])
+def backtest() -> dict[str, Any]:
+    """Latest backtest manifest, including the equity curve and benchmark comparison."""
+    return _serve("backtest")
 
-        if path == "/api/v1/openapi.json":
-            spec = generate_openapi_spec(self.base_dir)
-            return 200, spec
 
-        return 404, {"error": f"Path '{path}' not found"}
+@app.get("/api/v1/validation", tags=["research"])
+def validation() -> dict[str, Any]:
+    """Latest falsification report and lifecycle verdict."""
+    return _serve("validation")
+
+
+@app.get("/api/v1/models/comparison", tags=["research"])
+def model_comparison() -> dict[str, Any]:
+    """Latest purged walk-forward model comparison."""
+    return _serve("model-comparison")
+
+
+@app.get("/api/v1/market-data/verification", tags=["data"])
+def market_data_verification() -> dict[str, Any]:
+    """Corporate-action adjustment checked against the data provider's own series."""
+    return _serve("market-data-verification")
+
+
+@app.get("/api/v1/research-report", tags=["research"])
+def research_report() -> dict[str, Any]:
+    """Latest signed research campaign report."""
+    return _serve("research-report")
+
+
+@app.get("/api/v1/paper/evidence", tags=["operations"])
+def paper_evidence() -> dict[str, Any]:
+    """Latest paper trading forward evidence."""
+    return _serve("paper-forward-evidence")

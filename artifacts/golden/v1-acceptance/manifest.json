@@ -1,125 +1,19 @@
 {
-  "release_id": "quantlab-v1",
-  "version": "1.0.0",
-  "timestamp": "2026-08-17T02:13:53.621120+00:00",
-  "status": "ACCEPTED",
-  "doctor": {
-    "overall_status": "WARN",
-    "environment": "test",
-    "checks": [
-      {
-        "name": "python_runtime",
-        "status": "PASS",
-        "details": "Python 3.12.13"
-      },
-      {
-        "name": "configuration",
-        "status": "PASS",
-        "details": "Loaded configuration for environment 'test'"
-      },
-      {
-        "name": "calendar_timezone",
-        "status": "PASS",
-        "details": "System UTC timezone confirmed"
-      },
-      {
-        "name": "database_storage",
-        "status": "PASS",
-        "details": "Metadata database connection verified"
-      },
-      {
-        "name": "artifact_store",
-        "status": "PASS",
-        "details": "LocalArtifactStore verified (target: artifacts\\test)"
-      },
-      {
-        "name": "analytical_store",
-        "status": "PASS",
-        "details": "Analytical store and query execution verified (target: data\\fixtures)"
-      },
-      {
-        "name": "fixtures",
-        "status": "PASS",
-        "details": "Fixture 'data\\fixtures\\synthetic_v1' verified"
-      },
-      {
-        "name": "external_services",
-        "status": "WARN",
-        "details": "Offline mode active; external services not queried"
-      }
-    ],
-    "redacted_config": {
-      "environment": "test",
-      "timezone": "UTC",
-      "data_dir": "data\\fixtures",
-      "artifact_dir": "artifacts\\test",
-      "log_level": "DEBUG",
-      "secrets": {
-        "provider_api_key": "***REDACTED***"
-      }
-    }
-  },
-  "dataset_manifest": {
-    "dataset_id": "DATASET-v001",
-    "version": "v001",
-    "manifest_hash": "e79948cf9698fe16190aae0610abf166746a8aa2d47f86082b210addcd403eb6",
-    "tables": {
-      "instruments": "76b0d1ec221d9f6542f2bf11edbc7a00d8de2741aff25e20c31008980c46536f",
-      "symbol_history": "bc7fc45e6af49c997e97a2fded7784a155d9ced0f6f3fd6bd0d464a41ef912ec",
-      "prices": "66a4e484a1e3d9c3325ce250a67a240292fbc36960d3b3d84e15019f03ac03f2",
-      "actions": "9caf6e4a0448c9789ecc9c6abb90a15c4e8ae80bcf80259e8c475ce718f84070",
-      "fundamentals": "0217ac7a928ac6961c52be25a5badfd2d2353c183868f1d3b971066cc6dbd345"
-    },
-    "row_counts": {
-      "instruments": 6,
-      "symbol_history": 6,
-      "prices": 3910,
-      "actions": 4,
-      "fundamentals": 29
-    },
-    "created_at": "2026-08-17T02:13:48.451996+00:00",
-    "quality_report": {
-      "dataset_id": "DATASET-v001",
-      "overall_status": "PASS",
-      "confidence_score": 1.0,
-      "checks": [
-        {
-          "name": "price_positivity",
-          "status": "PASS",
-          "message": "All prices are positive and volumes non-negative",
-          "details": {}
-        },
-        {
-          "name": "ohlc_integrity",
-          "status": "PASS",
-          "message": "All high/low boundaries satisfy OHLC constraints",
-          "details": {}
-        },
-        {
-          "name": "temporal_integrity",
-          "status": "PASS",
-          "message": "No observations found ahead of as_of",
-          "details": {}
-        },
-        {
-          "name": "calendar_alignment",
-          "status": "PASS",
-          "message": "All sessions fall on standard business weekdays",
-          "details": {}
-        },
-        {
-          "name": "chronological_order",
-          "status": "PASS",
-          "message": "Bars are strictly chronological per instrument",
-          "details": {}
-        }
-      ]
-    }
-  },
-  "backtest_sharpe": 0.0,
-  "validation_verdict": "PAPER_CANDIDATE",
-  "ml_champion": "ridge",
-  "paper_sessions": 87,
+  "backtest_cagr": -0.014749,
+  "backtest_content_hash": "5360445932ca65b96215780847ce55ef53ac49d276f0263bcb9580391bd62811",
+  "backtest_sharpe": -0.634523,
   "campaign_report_id": "REP-quality-improves-momentum-v1",
-  "content_hash": "a851aea0975851aa8bac340adf12f32847d9e67592d62a93fcd143cb37790cdf"
+  "content_hash": "d879f5ca878d97857bc9f128952431967b6483e9d10cef2a3fb5fae87f751982",
+  "dataset_id": "DATASET-v001",
+  "dataset_manifest_hash": "11c236bfd24ff513257f0d26d202062d57b66fe4a388c7504e7eca26b5d0cc10",
+  "factor_rank_ic": 0.0,
+  "ml_champion": "composite",
+  "paper_sessions": 85,
+  "release_id": "quantlab-v1",
+  "validation_verdict": "RESEARCH_ONLY",
+  "version": "1.0.0",
+  "window": {
+    "end": "2022-12-30",
+    "start": "2021-01-04"
+  }
 }

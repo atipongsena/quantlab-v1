@@ -1,9 +1,14 @@
 """End-to-end test for paper forward simulation flow."""
 
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
 from apps.cli.main import app
 
 
-def test_paper_simulate_forward_flow(capsys) -> None:
+def test_paper_simulate_forward_flow(in_synthetic_workspace: Path, capsys) -> None:
     code = app(
         [
             "paper",
@@ -20,7 +25,10 @@ def test_paper_simulate_forward_flow(capsys) -> None:
         ]
     )
     assert code == 0
-    captured = capsys.readouterr()
-    assert "PAPER-SYNTHETIC" in captured.out
-    assert "clean_reconciliations" in captured.out
-    assert "total_sessions" in captured.out
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["deployment_id"] == "PAPER-SYNTHETIC"
+    assert payload["total_sessions"] > 0
+    # A reconciliation run that never reconciles anything would satisfy a substring
+    # check on the output while proving nothing.
+    assert payload["clean_reconciliations"] <= payload["total_sessions"]

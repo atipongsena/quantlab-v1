@@ -17,9 +17,18 @@ def mark_to_market(
     cash_ledger: CashLedger,
     position_ledger: PositionLedger,
     close_prices: Mapping[InstrumentId, Decimal],
+    last_known_prices: Mapping[InstrumentId, Decimal] | None = None,
 ) -> PortfolioSnapshot:
-    """Computes mark-to-market valuations and builds an authoritative PortfolioSnapshot."""
+    """Computes mark-to-market valuations and builds an authoritative PortfolioSnapshot.
+
+    When a session has no bar for a held name - a halt, a provider gap - the position is
+    carried at its **last observed close**. Falling back to cost basis instead makes the
+    portfolio jump to the purchase price for a day and jump back the next, which shows up
+    as a double-digit daily return that never happened and quietly destroys every
+    volatility, Sharpe, and drawdown figure computed from the series.
+    """
     positions_list: list[Position] = []
+    carried = last_known_prices or {}
 
     # Sort instruments by UUID string for determinism
     for inst, lot in sorted(position_ledger.positions.items(), key=lambda item: str(item[0].value)):
@@ -27,6 +36,8 @@ def mark_to_market(
             continue
 
         price = close_prices.get(inst)
+        if price is None or price <= Decimal("0.0"):
+            price = carried.get(inst)
         if price is None or price <= Decimal("0.0"):
             price = lot.cost_basis_per_share
 

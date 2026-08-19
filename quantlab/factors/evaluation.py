@@ -34,6 +34,66 @@ class EvaluationSpec:
     decay_horizons: tuple[int, ...] = (21, 63, 126, 252)
     num_quantiles: int = 5
     annualization_factor: float = 12.0
+    newey_west_lags: int = 3
+
+
+def _mean(values: Sequence[float]) -> float:
+    return sum(values) / len(values) if values else 0.0
+
+
+def _sample_std(values: Sequence[float]) -> float:
+    n = len(values)
+    if n < 2:
+        return 0.0
+    mu = _mean(values)
+    return math.sqrt(sum((v - mu) ** 2 for v in values) / (n - 1))
+
+
+def newey_west_tstat(series: Sequence[float], lags: int = 3) -> float:
+    """t-statistic for the mean of a serially correlated series.
+
+    Overlapping forward-return windows make consecutive ICs correlated, so the plain
+    OLS t-statistic overstates significance. Newey-West widens the standard error by the
+    autocovariance the overlap induces (Bartlett kernel), which is the correction a quant
+    reviewer expects to see on any IC or factor-return t-stat.
+    """
+    n = len(series)
+    if n < 3:
+        return 0.0
+
+    mu = _mean(series)
+    demeaned = [v - mu for v in series]
+
+    gamma0 = sum(d * d for d in demeaned) / n
+    variance = gamma0
+    usable_lags = min(lags, n - 1)
+    for lag in range(1, usable_lags + 1):
+        gamma = sum(demeaned[t] * demeaned[t - lag] for t in range(lag, n)) / n
+        weight = 1.0 - lag / (usable_lags + 1.0)
+        variance += 2.0 * weight * gamma
+
+    if variance <= 1e-18:
+        return 0.0
+    return mu / math.sqrt(variance / n)
+
+
+def _annualize_compound(period_returns: Sequence[float], periods_per_year: float) -> float:
+    """Geometric annualized return of a period-return series.
+
+    Multiplying a mean monthly return by 12 inflates a lucky month into a headline
+    number; compounding the realized path and annualizing over elapsed time does not.
+    """
+    if not period_returns:
+        return 0.0
+    growth = 1.0
+    for r in period_returns:
+        growth *= 1.0 + r
+    if growth <= 0.0:
+        return -1.0
+    years = len(period_returns) / periods_per_year
+    if years <= 0.0:
+        return 0.0
+    return float(growth ** (1.0 / years)) - 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +115,14 @@ class FactorResearchResult:
     coverage_mean: float
     turnover_mean: float
     diagnostic_label: str = "DIAGNOSTIC_ONLY_NON_DEPLOYABLE"
+    rank_ic_tstat: float = 0.0
+    rank_ic_tstat_newey_west: float = 0.0
+    breadth_mean: float = 0.0
+    quantile_monotonicity: float = 0.0
+    long_short_ann_return: float = 0.0
+    long_short_ann_vol: float = 0.0
+    long_short_sharpe: float = 0.0
+    subperiod_rank_ic: Mapping[str, float] = field(default_factory=dict)
     metadata: Mapping[str, object] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, object]:
@@ -70,9 +138,17 @@ class FactorResearchResult:
             "rank_ic_mean": round(self.rank_ic_mean, 6),
             "rank_ic_std": round(self.rank_ic_std, 6),
             "rank_ic_ir": round(self.rank_ic_ir, 6),
+            "rank_ic_tstat": round(self.rank_ic_tstat, 4),
+            "rank_ic_tstat_newey_west": round(self.rank_ic_tstat_newey_west, 4),
+            "breadth_mean": round(self.breadth_mean, 2),
             "decay_profile": {k: round(v, 6) for k, v in self.decay_profile.items()},
             "quantile_returns": {k: round(v, 6) for k, v in self.quantile_returns.items()},
+            "quantile_monotonicity": round(self.quantile_monotonicity, 4),
             "spread_q5_minus_q1": round(self.spread_q5_minus_q1, 6),
+            "long_short_ann_return": round(self.long_short_ann_return, 6),
+            "long_short_ann_vol": round(self.long_short_ann_vol, 6),
+            "long_short_sharpe": round(self.long_short_sharpe, 4),
+            "subperiod_rank_ic": {k: round(v, 6) for k, v in self.subperiod_rank_ic.items()},
             "coverage_mean": round(self.coverage_mean, 4),
             "turnover_mean": round(self.turnover_mean, 4),
             "diagnostic_label": self.diagnostic_label,
@@ -127,6 +203,31 @@ def _spearman_rank_correlation(
     return _pearson_correlation(rx, ry)
 
 
+def _rank_correlation_of_sequence(values: Sequence[float]) -> float:
+    """Spearman correlation between a sequence's position and its value.
+
+    Returns +1 when returns rise strictly with quantile index and -1 when they fall.
+    """
+    n = len(values)
+    if n < 2:
+        return 0.0
+
+    order = sorted(range(n), key=lambda i: values[i])
+    ranks = [0.0] * n
+    for rank_pos, idx in enumerate(order):
+        ranks[idx] = float(rank_pos)
+
+    positions = [float(i) for i in range(n)]
+    mean_pos = _mean(positions)
+    mean_rank = _mean(ranks)
+
+    cov = sum((positions[i] - mean_pos) * (ranks[i] - mean_rank) for i in range(n))
+    var_pos = sum((p - mean_pos) ** 2 for p in positions)
+    var_rank = sum((r - mean_rank) ** 2 for r in ranks)
+    denom = math.sqrt(var_pos * var_rank)
+    return cov / denom if denom > 1e-12 else 0.0
+
+
 class FactorEvaluator:
     """Evaluates cross-sectional factors against forward returns."""
 
@@ -149,13 +250,16 @@ class FactorEvaluator:
 
         ic_series: list[float] = []
         rank_ic_series: list[float] = []
+        rank_ic_by_year: dict[int, list[float]] = {}
         coverages: list[float] = []
         turnovers: list[float] = []
+        breadths: list[int] = []
 
         # Quantile returns cumulative collectors
         quantile_sums: dict[int, list[float]] = {
             q: [] for q in range(1, self._spec.num_quantiles + 1)
         }
+        long_short_series: list[float] = []
 
         prev_scores: dict[InstrumentId, float] | None = None
 
@@ -185,6 +289,9 @@ class FactorEvaluator:
                 ric_val = _spearman_rank_correlation(valid_scores, fwd_ret)
                 if ric_val is not None:
                     rank_ic_series.append(ric_val)
+                    rank_ic_by_year.setdefault(snap.session.year, []).append(ric_val)
+
+                breadths.append(len(set(valid_scores) & set(fwd_ret)))
 
                 # Quantiles
                 q_assign = assign_quantiles(valid_scores, self._spec.num_quantiles)
@@ -192,33 +299,25 @@ class FactorEvaluator:
                 for q, ret in q_rets.items():
                     quantile_sums[q].append(ret)
 
-        # Compute summary stats
+                top_q = self._spec.num_quantiles
+                if top_q in q_rets and 1 in q_rets:
+                    long_short_series.append(q_rets[top_q] - q_rets[1])
+
+        # Compute summary stats. IR is the per-rebalance ratio mean(IC)/std(IC); the
+        # annualized figure is IR * sqrt(periods_per_year) and is reported separately so
+        # the two are never conflated when a t-statistic is derived downstream.
         n_ic = len(ic_series)
-        ic_mean = sum(ic_series) / n_ic if n_ic > 0 else 0.0
-        ic_std = (
-            math.sqrt(sum((x - ic_mean) ** 2 for x in ic_series) / max(1, n_ic - 1))
-            if n_ic > 1
-            else 0.0
-        )
-        ic_ir = (
-            (ic_mean / ic_std) * math.sqrt(self._spec.annualization_factor)
-            if ic_std > 1e-6
-            else 0.0
-        )
+        ic_mean = _mean(ic_series)
+        ic_std = _sample_std(ic_series)
+        ic_ir = (ic_mean / ic_std) if ic_std > 1e-9 else 0.0
         ic_pos_pct = (sum(1 for x in ic_series if x > 0) / n_ic) if n_ic > 0 else 0.0
 
         n_ric = len(rank_ic_series)
-        rank_ic_mean = sum(rank_ic_series) / n_ric if n_ric > 0 else 0.0
-        rank_ic_std = (
-            math.sqrt(sum((x - rank_ic_mean) ** 2 for x in rank_ic_series) / max(1, n_ric - 1))
-            if n_ric > 1
-            else 0.0
-        )
-        rank_ic_ir = (
-            (rank_ic_mean / rank_ic_std) * math.sqrt(self._spec.annualization_factor)
-            if rank_ic_std > 1e-6
-            else 0.0
-        )
+        rank_ic_mean = _mean(rank_ic_series)
+        rank_ic_std = _sample_std(rank_ic_series)
+        rank_ic_ir = (rank_ic_mean / rank_ic_std) if rank_ic_std > 1e-9 else 0.0
+        rank_ic_tstat = rank_ic_ir * math.sqrt(n_ric) if n_ric > 0 else 0.0
+        rank_ic_tstat_nw = newey_west_tstat(rank_ic_series, self._spec.newey_west_lags)
 
         # Decay profile over horizons (1M=21, 3M=63, 6M=126, 12M=252)
         horizon_labels = {21: "1M", 63: "3M", 126: "6M", 252: "12M"}
@@ -235,19 +334,33 @@ class FactorEvaluator:
                         h_ics.append(val)
             decay_profile[label] = sum(h_ics) / len(h_ics) if h_ics else 0.0
 
-        # Mean annualized quantile returns
+        # Quantile portfolio returns, compounded then annualized over elapsed time.
+        periods_per_year = self._spec.annualization_factor
         ann_q_rets: dict[str, float] = {}
         for q in range(1, self._spec.num_quantiles + 1):
-            q_list = quantile_sums.get(q, [])
-            mean_q = sum(q_list) / len(q_list) if q_list else 0.0
-            ann_q_rets[f"Q{q}"] = mean_q * self._spec.annualization_factor
+            ann_q_rets[f"Q{q}"] = _annualize_compound(quantile_sums.get(q, []), periods_per_year)
 
         q1_ret = ann_q_rets.get("Q1", 0.0)
         q5_ret = ann_q_rets.get(f"Q{self._spec.num_quantiles}", 0.0)
         spread = q5_ret - q1_ret
 
-        coverage_mean = sum(coverages) / len(coverages) if coverages else 0.0
-        turnover_mean = sum(turnovers) / len(turnovers) if turnovers else 0.0
+        # Monotonicity: rank correlation between quantile index and realized return.
+        # A factor whose middle buckets are scrambled is not a usable sort even when the
+        # extreme buckets happen to line up.
+        ordered_q = [ann_q_rets[f"Q{q}"] for q in range(1, self._spec.num_quantiles + 1)]
+        monotonicity = _rank_correlation_of_sequence(ordered_q)
+
+        ls_ann_return = _annualize_compound(long_short_series, periods_per_year)
+        ls_ann_vol = _sample_std(long_short_series) * math.sqrt(periods_per_year)
+        ls_sharpe = (ls_ann_return / ls_ann_vol) if ls_ann_vol > 1e-9 else 0.0
+
+        subperiod_rank_ic = {
+            str(year): _mean(values) for year, values in sorted(rank_ic_by_year.items())
+        }
+
+        coverage_mean = _mean(coverages)
+        turnover_mean = _mean(turnovers)
+        breadth_mean = _mean([float(b) for b in breadths])
 
         return FactorResearchResult(
             factor_id=factor_id,
@@ -266,4 +379,12 @@ class FactorEvaluator:
             spread_q5_minus_q1=spread,
             coverage_mean=coverage_mean,
             turnover_mean=turnover_mean,
+            rank_ic_tstat=rank_ic_tstat,
+            rank_ic_tstat_newey_west=rank_ic_tstat_nw,
+            breadth_mean=breadth_mean,
+            quantile_monotonicity=monotonicity,
+            long_short_ann_return=ls_ann_return,
+            long_short_ann_vol=ls_ann_vol,
+            long_short_sharpe=ls_sharpe,
+            subperiod_rank_ic=subperiod_rank_ic,
         )

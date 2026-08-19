@@ -1,7 +1,7 @@
 # QuantLab Paper Trading & Daily Operations Specifications (V1)
 
 ## 1. Daily Operational Lifecycle
-1. **Pre-Market Ingestion**: Ingest latest session bar data into immutable DuckDB store.
+1. **Pre-Market Ingestion**: Ingest latest session bar data into immutable partitioned analytical store.
 2. **Signal & Portfolio Rebalance**: Compute point-in-time cross-sectional alpha, solve portfolio targets, and generate rebalance orders (SELLs before BUYs).
 3. **Execution Routing**: Transmit orders to mock broker or paper broker adapter with deterministic slippage and commissions.
 4. **Fills & Ledger Update**: Record fills into SQLite state store, updating cash balance and instrument position holdings.

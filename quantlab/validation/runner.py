@@ -9,7 +9,7 @@ from quantlab.validation.candidate import FrozenCandidate
 from quantlab.validation.gates import HardGateEvaluator
 from quantlab.validation.multiple_testing import TrialDiagnostics
 from quantlab.validation.result import ValidationResult
-from quantlab.validation.robustness import RobustnessRunner
+from quantlab.validation.robustness import RobustnessArtifact
 from quantlab.validation.verdicts import VerdictEngine
 
 
@@ -21,6 +21,7 @@ class ValidationRunner:
         cls,
         candidate: FrozenCandidate,
         returns_series: Sequence[float],
+        robustness: RobustnessArtifact,
         trial_sharpes: Sequence[float] = (),
         lookahead_detected: bool = False,
         data_corrupt: bool = False,
@@ -35,18 +36,18 @@ class ValidationRunner:
             reproducibility_failed=reproducibility_failed,
         )
 
-        # 2. Robustness and ablations
-        robustness = RobustnessRunner.run(candidate=candidate)
+        # 2. Robustness evidence is supplied by the caller: it can only come from real
+        # re-runs of the strategy, which the validation runner has no way to perform.
 
         # 3. Stationary block bootstrap
         bootstrap = BootstrapRunner.run(returns=returns_series, spec=bootstrap_spec)
 
-        # 4. Multiple testing evidence
-        trials = list(trial_sharpes) if trial_sharpes else [bootstrap.point_estimate]
+        # 4. Multiple testing evidence. The trial ledger is what it is: with a single
+        # recorded trial there is no measured spread of Sharpes to deflate against, and
+        # the result leans on an assumed variance rather than on evidence.
         multiple_testing = TrialDiagnostics.evaluate(
-            observed_sharpe=bootstrap.point_estimate,
-            trial_sharpes=trials,
-            sample_length=len(returns_series),
+            returns=returns_series,
+            trial_sharpes=list(trial_sharpes),
         )
 
         # 5. Determine authoritative verdict

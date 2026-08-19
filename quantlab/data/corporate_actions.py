@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from bisect import bisect_left
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from typing import Protocol
 
 from quantlab.domain.corporate_actions import CorporateAction, CorporateActionType
@@ -25,6 +26,11 @@ class CorporateActionStore(Protocol):
 class SqlCorporateActionStore:
     def __init__(self, engine: DatabaseEngine) -> None:
         self._engine = engine
+        # Every adjusted bar read asks for an instrument's action history. Over a
+        # multi-decade study that is one SQLite round trip per instrument per rebalance
+        # for a table that only changes at ingest time, so the full history is held per
+        # instrument and sliced in memory.
+        self._history_cache: dict[str, tuple[CorporateAction, ...]] = {}
         self._ensure_table()
 
     def _ensure_table(self) -> None:
@@ -42,17 +48,27 @@ class SqlCorporateActionStore:
                     cash_amount TEXT,
                     source TEXT NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS idx_actions_inst 
+                CREATE INDEX IF NOT EXISTS idx_actions_inst
                 ON corporate_actions(instrument_id, effective_at);
+                -- Ingesting the same dataset twice must not double an instrument's
+                -- action history. A duplicated 4:1 split silently adjusts every earlier
+                -- price by 16 instead of 4, which corrupts every return, factor, and
+                -- backtest downstream without raising anything.
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_actions_natural_key
+                ON corporate_actions(
+                    instrument_id, action_type, effective_at,
+                    COALESCE(ratio, ''), COALESCE(cash_amount, '')
+                );
                 """
             )
 
     def record_action(self, action: CorporateAction) -> None:
+        self._history_cache.pop(str(action.instrument_id.value), None)
         with self._engine.transaction() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO corporate_actions (
+                INSERT OR IGNORE INTO corporate_actions (
                     instrument_id, action_type, effective_at, announced_at,
                     available_at, ratio, cash_amount, source
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -75,19 +91,26 @@ class SqlCorporateActionStore:
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> tuple[CorporateAction, ...]:
-        query = "SELECT * FROM corporate_actions WHERE instrument_id = ?"
-        params: list[object] = [str(instrument_id.value)]
-        if start_date is not None:
-            query += " AND effective_at >= ?"
-            params.append(start_date.isoformat())
-        if end_date is not None:
-            query += " AND effective_at <= ?"
-            params.append(end_date.isoformat())
-        query += " ORDER BY effective_at ASC"
+        history = self._full_history(instrument_id)
+        if start_date is None and end_date is None:
+            return history
+        return tuple(
+            action
+            for action in history
+            if (start_date is None or action.effective_at >= start_date)
+            and (end_date is None or action.effective_at <= end_date)
+        )
 
+    def _full_history(self, instrument_id: InstrumentId) -> tuple[CorporateAction, ...]:
+        key = str(instrument_id.value)
+        cached = self._history_cache.get(key)
+        if cached is not None:
+            return cached
+
+        query = "SELECT * FROM corporate_actions WHERE instrument_id = ? ORDER BY effective_at ASC"
         with self._engine.transaction() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, params)
+            cursor.execute(query, [key])
             rows = cursor.fetchall()
             actions = [
                 CorporateAction(
@@ -104,7 +127,10 @@ class SqlCorporateActionStore:
                 )
                 for r in rows
             ]
-            return tuple(actions)
+
+        history = tuple(actions)
+        self._history_cache[key] = history
+        return history
 
 
 def compute_cumulative_adjustment_factors(
@@ -129,7 +155,10 @@ def compute_cumulative_adjustment_factors(
         if (as_of is None or a.available_at <= as_of) and a.effective_at > sorted_bars[0].session
     ]
 
-    # Compute factors for each action
+    # Compute factors for each action. The dividend factor needs the last close before
+    # the ex-date, found by binary search rather than by rescanning the bar history for
+    # every one of thirty years' worth of quarterly payments.
+    bar_sessions = [b.session for b in sorted_bars]
     action_factors: list[tuple[date, Decimal, Decimal]] = []
     for a in valid_actions:
         eff = a.effective_at
@@ -139,21 +168,30 @@ def compute_cumulative_adjustment_factors(
             p_fac = Decimal("1") / a.ratio
             v_fac = a.ratio
         elif a.action_type == CorporateActionType.DIVIDEND and a.cash_amount is not None:
-            prior_bars = [b for b in sorted_bars if b.session < eff]
-            if prior_bars:
-                prior_close = prior_bars[-1].close
+            prior_index = bisect_left(bar_sessions, eff) - 1
+            if prior_index >= 0:
+                prior_close = sorted_bars[prior_index].close
                 if prior_close > a.cash_amount:
                     p_fac = (prior_close - a.cash_amount) / prior_close
         action_factors.append((eff, p_fac, v_fac))
 
+    # Accumulate backwards in one pass. A bar carries the product of every action
+    # effective strictly after it, so walking from the newest bar to the oldest lets the
+    # running product be reused instead of rescanning the action list per bar - the
+    # difference between O(bars * actions) and O(bars + actions) over thirty years of
+    # quarterly dividends.
+    action_factors.sort(key=lambda item: item[0])
     cumulative_factors: dict[date, tuple[Decimal, Decimal]] = {}
-    for bar in sorted_bars:
-        p_acc = Decimal("1")
-        v_acc = Decimal("1")
-        for eff, p_fac, v_fac in action_factors:
-            if bar.session < eff:
-                p_acc *= p_fac
-                v_acc *= v_fac
+    p_acc = Decimal("1")
+    v_acc = Decimal("1")
+    next_action = len(action_factors) - 1
+
+    for bar in reversed(sorted_bars):
+        while next_action >= 0 and action_factors[next_action][0] > bar.session:
+            _, p_fac, v_fac = action_factors[next_action]
+            p_acc *= p_fac
+            v_acc *= v_fac
+            next_action -= 1
         cumulative_factors[bar.session] = (p_acc, v_acc)
 
     return cumulative_factors

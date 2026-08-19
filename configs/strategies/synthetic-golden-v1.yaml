@@ -1,0 +1,31 @@
+strategy_id: synthetic-golden-v1
+version: v1
+description: >-
+  Fixed strategy used only by the golden regression test. It runs on the committed
+  synthetic fixture, so its numbers are a reproducibility fingerprint rather than a
+  research result. Change it and the golden record has to be regenerated deliberately.
+
+composite_id: composite-price-v1
+dataset: DATASET-v001
+
+initial_cash: "1000000.00"
+
+selection:
+  # The synthetic fixture has five tradable equities, so hold three of them.
+  target_size: 3
+  buffer_size: 4
+
+weighting:
+  method: equal
+  cash_buffer_pct: 0.01
+  max_name_weight: 0.40
+
+rebalance:
+  frequency: monthly
+  schedule: month_end_close
+
+execution:
+  slippage_bps: 5.0
+  commission_per_share: 0.005
+
+benchmark: SPY

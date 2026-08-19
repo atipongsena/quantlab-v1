@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml  # type: ignore[import-untyped]
 
 from quantlab.data.corporate_actions import SqlCorporateActionStore
+from quantlab.data.datasets import DatasetMember, DatasetUniverseResolver
 from quantlab.data.fundamentals import SqlFundamentalStore
 from quantlab.data.macro import SqlMacroStore
 from quantlab.data.market_bars import MarketBarStore
@@ -25,9 +26,12 @@ from quantlab.factors.evaluation import (
     ForwardReturnView,
 )
 from quantlab.factors.registry import FactorRegistry
+from quantlab.factors.transforms import rank_cross_section
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
 from quantlab.infrastructure.db import DatabaseConfig, DatabaseEngine
-from quantlab.infrastructure.duckdb import LocalAnalyticalStore
 from quantlab.infrastructure.instrument_repository import SqlInstrumentRepository
+from quantlab.ml.contracts import MLDataset
+from quantlab.ml.dataset import MLDatasetBuilder
 from quantlab.universe.membership import UniverseEngine
 
 
@@ -46,10 +50,11 @@ class FactorResearchService:
         self._db_engine = db_engine or DatabaseEngine(DatabaseConfig(url=f"sqlite:///{db_path}"))
         self._analytical_store = LocalAnalyticalStore(self._base_dir / "data")
         self._registry = register_standard_factors(registry or FactorRegistry.global_instance())
+        self._universes = DatasetUniverseResolver(self._analytical_store)
 
-    def _create_pit_facade(self) -> PointInTimeDataFacade:
+    def _create_pit_facade(self, dataset_id: str) -> PointInTimeDataFacade:
         inst_repo = SqlInstrumentRepository(self._db_engine)
-        bar_store = MarketBarStore(self._analytical_store)
+        bar_store = MarketBarStore(self._analytical_store, MarketBarStore.namespace_for(dataset_id))
         action_store = SqlCorporateActionStore(self._db_engine)
         fund_store = SqlFundamentalStore(self._db_engine)
         macro_store = SqlMacroStore(self._db_engine)
@@ -81,28 +86,75 @@ class FactorResearchService:
             for f in sorted(factors, key=lambda x: x.factor_id)
         ]
 
-    def _get_universe(self, pit_facade: PointInTimeDataFacade) -> tuple[InstrumentId, ...]:
-        """Fetch all instruments from repo."""
-        repo = SqlInstrumentRepository(self._db_engine)
-        instruments = repo.list_all()
-        return tuple(inst.instrument_id for inst in instruments)
+    def _get_universe(self, dataset_id: str) -> tuple[DatasetMember, ...]:
+        """Resolve the cross-sectional equity universe published with a dataset."""
+        members = self._universes.equities(dataset_id)
+        if not members:
+            raise ValueError(f"Dataset '{dataset_id}' contains no equity instruments")
+        return members
+
+    def _discover_sessions(
+        self,
+        dataset_id: str,
+        universe: Sequence[InstrumentId],
+        start_date: date | None,
+        end_date: date | None,
+    ) -> list[date]:
+        """Union the trading calendar across the whole universe.
+
+        Sampling one instrument is unsafe: the first name alphabetically may have listed
+        late, been delisted early, or have gaps, which silently truncates the study.
+        """
+        bar_store = MarketBarStore(self._analytical_store, MarketBarStore.namespace_for(dataset_id))
+        sessions: set[date] = set()
+        for inst_id in universe:
+            sessions.update(bar_store.list_sessions(inst_id, BarPriceSemantic.RAW))
+
+        ordered = sorted(sessions)
+        if start_date:
+            ordered = [s for s in ordered if s >= start_date]
+        if end_date:
+            ordered = [s for s in ordered if s <= end_date]
+        return ordered
+
+    @staticmethod
+    def _rebalance_sessions(sessions: Sequence[date], step: int = 21) -> list[date]:
+        """Take a monthly rebalance grid anchored on the last session of each month.
+
+        Spec 4.3 makes the monthly cross-section the observation unit, and anchoring on
+        month-end keeps research aligned with the rebalance the backtest actually trades.
+        """
+        if not sessions:
+            return []
+
+        by_month: dict[tuple[int, int], date] = {}
+        for session in sessions:
+            by_month[(session.year, session.month)] = session
+        month_ends = sorted(by_month.values())
+        return month_ends if month_ends else list(sessions[::step])
 
     def _build_forward_returns(
         self,
         pit_facade: PointInTimeDataFacade,
         universe: Sequence[InstrumentId],
-        sessions: Sequence[date],
+        all_sessions: Sequence[date],
+        eval_sessions: Sequence[date],
         horizons: tuple[int, ...] = (21, 63, 126, 252),
     ) -> ForwardReturnView:
-        """Compute forward returns across specified horizons for all sessions."""
-        if not sessions:
+        """Build tradable forward returns for each evaluation session.
+
+        Entry is the next session's open, not the close the signal was observed at
+        (spec 4.4): a score computed from the close of session *t* cannot be filled at
+        that same close. Exit is the open *h* sessions later, on total-return adjusted
+        prices so dividends are not dropped from the research return.
+        """
+        if not all_sessions or not eval_sessions:
             return ForwardReturnView(returns={})
 
-        start_date = sessions[0]
-        end_date = sessions[-1]
+        start_date = all_sessions[0]
+        end_date = all_sessions[-1]
         as_of_latest = datetime.combine(end_date, time(23, 59), tzinfo=UTC)
 
-        # Collect adjusted close price series for all instruments
         inst_prices: dict[InstrumentId, dict[date, float]] = {}
         for inst_id in universe:
             bars = pit_facade.get_market_bars(
@@ -112,23 +164,35 @@ class FactorResearchService:
                 as_of=as_of_latest,
                 adjusted=True,
             )
-            inst_prices[inst_id] = {b.session: float(b.close) for b in bars}
+            inst_prices[inst_id] = {b.session: float(b.open) for b in bars}
+
+        session_list = sorted(all_sessions)
+        index_of = {s: i for i, s in enumerate(session_list)}
 
         returns_map: dict[tuple[date, int], dict[InstrumentId, float]] = {}
-        session_list = sorted(sessions)
+        for sess in eval_sessions:
+            base = index_of.get(sess)
+            if base is None:
+                continue
+            entry_idx = base + 1
+            if entry_idx >= len(session_list):
+                continue
+            entry_sess = session_list[entry_idx]
 
-        for i, sess in enumerate(session_list):
             for h in horizons:
-                if i + h < len(session_list):
-                    target_sess = session_list[i + h]
-                    h_returns: dict[InstrumentId, float] = {}
-                    for inst_id in universe:
-                        p_map = inst_prices.get(inst_id, {})
-                        p_start = p_map.get(sess)
-                        p_end = p_map.get(target_sess)
-                        if p_start is not None and p_end is not None and p_start > 0:
-                            h_returns[inst_id] = (p_end / p_start) - 1.0
-                    returns_map[(sess, h)] = h_returns
+                exit_idx = entry_idx + h
+                if exit_idx >= len(session_list):
+                    continue
+                exit_sess = session_list[exit_idx]
+
+                h_returns: dict[InstrumentId, float] = {}
+                for inst_id in universe:
+                    p_map = inst_prices.get(inst_id, {})
+                    p_start = p_map.get(entry_sess)
+                    p_end = p_map.get(exit_sess)
+                    if p_start is not None and p_end is not None and p_start > 0:
+                        h_returns[inst_id] = (p_end / p_start) - 1.0
+                returns_map[(sess, h)] = h_returns
 
         return ForwardReturnView(returns=returns_map)
 
@@ -145,38 +209,18 @@ class FactorResearchService:
         if calc is None:
             raise KeyError(f"Factor '{factor_id}' is not registered")
 
-        pit_facade = self._create_pit_facade()
-        universe = self._get_universe(pit_facade)
-        if not universe:
-            raise ValueError(f"No instruments found in dataset '{dataset_id}'")
+        pit_facade = self._create_pit_facade(dataset_id)
+        members = self._get_universe(dataset_id)
+        universe = tuple(m.instrument_id for m in members)
 
-        # Discover trading sessions from market bars
-        raw_bars = pit_facade._bar_store.get_bars(  # noqa: SLF001
-            instrument_id=universe[0],
-            start_date=start_date or date(2015, 1, 1),
-            end_date=end_date or date(2025, 12, 31),
-            semantic=BarPriceSemantic.RAW,
-        )
-        all_sessions = sorted({b.session for b in raw_bars})
+        all_sessions = self._discover_sessions(dataset_id, universe, start_date, end_date)
         if not all_sessions:
-            # Fallback mock session
-            all_sessions = [start_date or date.today()]
+            raise ValueError(f"Dataset '{dataset_id}' holds no market bars in the requested window")
 
-        # Filter by start_date / end_date
-        if start_date:
-            all_sessions = [s for s in all_sessions if s >= start_date]
-        if end_date:
-            all_sessions = [s for s in all_sessions if s <= end_date]
+        eval_sessions = self._rebalance_sessions(all_sessions)
 
-        # Monthly sample sessions (at least every 21 sessions or month-ends) for evaluation
-        # Sample every 21 trading sessions for clean rebalance IC
-        sample_sessions = [all_sessions[i] for i in range(0, len(all_sessions), 21)]
-        if not sample_sessions:
-            sample_sessions = all_sessions
-
-        # Compute factor snapshots for each session
         snapshots: list[FactorSnapshot] = []
-        for sess in sample_sessions:
+        for sess in eval_sessions:
             as_of_sess = datetime.combine(sess, time(16, 0), tzinfo=UTC)
             context = FactorContext(
                 dataset_id=dataset_id,
@@ -185,17 +229,93 @@ class FactorResearchService:
                 pit_data=pit_facade,
                 universe=universe,
             )
-            snap = calc.compute(context)
-            snapshots.append(snap)
+            snapshots.append(calc.compute(context))
 
         forward_returns = self._build_forward_returns(
             pit_facade=pit_facade,
             universe=universe,
-            sessions=all_sessions,
+            all_sessions=all_sessions,
+            eval_sessions=eval_sessions,
         )
 
         evaluator = FactorEvaluator(spec or EvaluationSpec())
         return evaluator.evaluate(snapshots, forward_returns)
+
+    def build_factor_panel(
+        self,
+        dataset_id: str,
+        factor_ids: Sequence[str],
+        start_date: date | None = None,
+        end_date: date | None = None,
+        label_horizon: int = 21,
+    ) -> MLDataset:
+        """Assemble the monthly cross-sectional panel the ML models train on.
+
+        Features are point-in-time factor scores at each month-end close. The label is
+        the cross-sectional rank of the tradable forward return over the next
+        ``label_horizon`` sessions, mapped onto [-0.5, 0.5]. Ranking is the target
+        because the models are asked to order names, not to forecast a return level
+        (spec 4.1), and a rank label is immune to the handful of extreme moves that
+        would otherwise dominate a squared-error fit.
+        """
+        pit_facade = self._create_pit_facade(dataset_id)
+        members = self._get_universe(dataset_id)
+        universe = tuple(m.instrument_id for m in members)
+
+        all_sessions = self._discover_sessions(dataset_id, universe, start_date, end_date)
+        if not all_sessions:
+            raise ValueError(f"Dataset '{dataset_id}' holds no market bars in the requested window")
+        eval_sessions = self._rebalance_sessions(all_sessions)
+
+        calculators = []
+        for factor_id in factor_ids:
+            calc = self._registry.get(factor_id)
+            if calc is None:
+                raise KeyError(f"Factor '{factor_id}' is not registered")
+            calculators.append((factor_id, calc))
+
+        # Session outer, longest lookback first. All factors at one rebalance share the
+        # same as-of instant, so the widest price window is read and adjusted once and
+        # the shorter-lookback factors slice it out of the facade's cache instead of
+        # re-adjusting the same bars.
+        calculators.sort(key=lambda item: item[1].definition.lookback_sessions, reverse=True)
+
+        snapshots_by_factor: dict[str, dict[date, FactorSnapshot]] = {
+            factor_id: {} for factor_id, _ in calculators
+        }
+        for sess in eval_sessions:
+            context = FactorContext(
+                dataset_id=dataset_id,
+                session=sess,
+                as_of=datetime.combine(sess, time(16, 0), tzinfo=UTC),
+                pit_data=pit_facade,
+                universe=universe,
+            )
+            for factor_id, calc in calculators:
+                snapshots_by_factor[factor_id][sess] = calc.compute(context)
+
+        forward_returns = self._build_forward_returns(
+            pit_facade=pit_facade,
+            universe=universe,
+            all_sessions=all_sessions,
+            eval_sessions=eval_sessions,
+            horizons=(label_horizon,),
+        )
+
+        labels_by_session: dict[date, dict[InstrumentId, float]] = {}
+        for sess in eval_sessions:
+            returns = forward_returns.get_returns(sess, label_horizon)
+            if len(returns) < 3:
+                continue
+            ranks = rank_cross_section(dict(returns), normalize=True)
+            labels_by_session[sess] = {inst: value - 0.5 for inst, value in ranks.items()}
+
+        return MLDatasetBuilder.build(
+            dataset_id=dataset_id,
+            factor_snapshots_by_name=snapshots_by_factor,
+            labels_by_session=labels_by_session,
+            sessions=eval_sessions,
+        )
 
     def run_composite(
         self,
@@ -229,34 +349,19 @@ class FactorResearchService:
             metadata=cfg_data,
         )
 
-        pit_facade = self._create_pit_facade()
-        universe = self._get_universe(pit_facade)
-        if not universe:
-            raise ValueError(f"No instruments found in dataset '{dataset_id}'")
+        pit_facade = self._create_pit_facade(dataset_id)
+        members = self._get_universe(dataset_id)
+        universe = tuple(m.instrument_id for m in members)
 
-        # Discover sessions
-        raw_bars = pit_facade._bar_store.get_bars(  # noqa: SLF001
-            instrument_id=universe[0],
-            start_date=start_date or date(2015, 1, 1),
-            end_date=end_date or date(2025, 12, 31),
-            semantic=BarPriceSemantic.RAW,
-        )
-        all_sessions = sorted({b.session for b in raw_bars})
+        all_sessions = self._discover_sessions(dataset_id, universe, start_date, end_date)
         if not all_sessions:
-            all_sessions = [start_date or date.today()]
+            raise ValueError(f"Dataset '{dataset_id}' holds no market bars in the requested window")
 
-        if start_date:
-            all_sessions = [s for s in all_sessions if s >= start_date]
-        if end_date:
-            all_sessions = [s for s in all_sessions if s <= end_date]
-
-        sample_sessions = [all_sessions[i] for i in range(0, len(all_sessions), 21)]
-        if not sample_sessions:
-            sample_sessions = all_sessions
+        eval_sessions = self._rebalance_sessions(all_sessions)
 
         # Compute composite snapshots
         composite_snapshots: list[FactorSnapshot] = []
-        for sess in sample_sessions:
+        for sess in eval_sessions:
             as_of_sess = datetime.combine(sess, time(16, 0), tzinfo=UTC)
             context = FactorContext(
                 dataset_id=dataset_id,
@@ -280,7 +385,8 @@ class FactorResearchService:
         forward_returns = self._build_forward_returns(
             pit_facade=pit_facade,
             universe=universe,
-            sessions=all_sessions,
+            all_sessions=all_sessions,
+            eval_sessions=eval_sessions,
         )
 
         evaluator = FactorEvaluator(spec or EvaluationSpec())

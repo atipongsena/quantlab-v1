@@ -1,0 +1,14 @@
+{
+  "strategy_id": "synthetic-golden-v1",
+  "start_session": "2021-01-04",
+  "end_session": "2022-12-30",
+  "sessions": 520,
+  "orders": 5,
+  "fills": 4,
+  "total_return": -0.03013926,
+  "cagr": -0.0147493032,
+  "sharpe_ratio": -0.6345228945,
+  "max_drawdown": 0.0332852977,
+  "total_turnover": 0.0832,
+  "content_hash": "5360445932ca65b96215780847ce55ef53ac49d276f0263bcb9580391bd62811"
+}

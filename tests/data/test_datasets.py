@@ -4,8 +4,8 @@ from pathlib import Path
 
 from quantlab.data.datasets import DatasetPublisher
 from quantlab.data.quality import QualityReport
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
 from quantlab.infrastructure.artifacts import LocalArtifactStore
-from quantlab.infrastructure.duckdb import LocalAnalyticalStore
 
 
 def test_dataset_publisher_manifest_and_artifact_immutability(tmp_path: Path) -> None:

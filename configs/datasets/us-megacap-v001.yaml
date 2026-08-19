@@ -1,4 +1,0 @@
-dataset_id: DATASET-US-MEGACAP-v001
-version: v001
-fixture: us_megacap
-source_dir: data/fixtures/us_megacap/source

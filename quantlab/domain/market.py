@@ -16,8 +16,17 @@ from quantlab.domain.identity import (
 
 
 class BarPriceSemantic(StrEnum):
+    """Price semantics a daily bar can carry.
+
+    ``RAW`` is the tradable price: execution, fills, and cash accounting use it, and
+    dividends are credited separately as cash. ``TOTAL_RETURN_ADJUSTED`` folds both
+    splits and cash dividends back into the price series and is for return and factor
+    research only. Mixing the two in one accounting path double-counts dividends.
+    """
+
     RAW = "raw"
-    ADJUSTED = "adjusted"
+    TOTAL_RETURN_ADJUSTED = "adjusted"
+    ADJUSTED = "adjusted"  # legacy alias for TOTAL_RETURN_ADJUSTED
 
 
 @dataclass(frozen=True, slots=True)

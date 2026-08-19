@@ -61,23 +61,37 @@ def run_factor_research(args: argparse.Namespace) -> int:
         f"Period: {result.start_session} to {result.end_session} ({result.num_sessions} sessions)"
     )
     print("=" * 70)
-    print(f"Information Coefficient (IC) Mean : {result.ic_mean:+.4f}")
-    print(f"IC Standard Deviation              : {result.ic_std:.4f}")
-    print(f"Information Ratio (IR)             : {result.ic_ir:+.4f}")
-    print(f"Positive IC Frequency              : {result.ic_positive_pct * 100:.1f}%")
-    print(f"Rank IC (Spearman) Mean            : {result.rank_ic_mean:+.4f}")
-    print(f"Rank IC IR                         : {result.rank_ic_ir:+.4f}")
+    print(f"Rebalances         : {result.num_sessions} (monthly, month-end close)")
+    print(f"Mean cross-section : {result.breadth_mean:.1f} names with a tradable label")
+    print(f"Factor coverage    : {result.coverage_mean * 100:.1f}% of universe scored")
     print("-" * 70)
-    print("IC Decay Profile:")
+    print(f"Pearson IC mean    : {result.ic_mean:+.4f}  (sd {result.ic_std:.4f})")
+    print(f"Rank IC mean       : {result.rank_ic_mean:+.4f}  (sd {result.rank_ic_std:.4f})")
+    print(f"Rank IC IR         : {result.rank_ic_ir:+.4f} per rebalance")
+    print(f"Rank IC t-stat     : {result.rank_ic_tstat:+.2f} OLS")
+    print(f"  Newey-West       : {result.rank_ic_tstat_newey_west:+.2f} (overlap-adjusted)")
+    print(f"Positive IC months : {result.ic_positive_pct * 100:.1f}%")
+    print("-" * 70)
+    print("Rank IC by forward horizon:")
     for horizon, ic_val in result.decay_profile.items():
         print(f"  - {horizon:>4}: {ic_val:+.4f}")
     print("-" * 70)
-    print("Quantile Annualized Forward Returns:")
+    print("Quantile portfolios (annualized, compounded, gross of costs):")
     for q_name, ret in sorted(result.quantile_returns.items()):
         print(f"  - {q_name:>4}: {ret * 100:+.2f}%")
-    print(f"Spread (Q5 - Q1) : {result.spread_q5_minus_q1 * 100:+.2f}%")
-    print(f"Coverage: {result.coverage_mean * 100:.1f}%")
-    print(f"Turnover: {result.turnover_mean * 100:.1f}%")
+    print(f"Monotonicity       : {result.quantile_monotonicity:+.2f} (rank corr, +1 = clean sort)")
+    print(f"Q5 - Q1 spread     : {result.spread_q5_minus_q1 * 100:+.2f}% annualized")
+    print(
+        f"Long/short leg     : {result.long_short_ann_return * 100:+.2f}% return | "
+        f"{result.long_short_ann_vol * 100:.2f}% vol | Sharpe {result.long_short_sharpe:+.2f}"
+    )
+    print(f"Rank turnover      : {result.turnover_mean * 100:.1f}% per rebalance")
+    if result.subperiod_rank_ic:
+        print("-" * 70)
+        print("Rank IC stability by year:")
+        for year, val in result.subperiod_rank_ic.items():
+            print(f"  - {year}: {val:+.4f}")
+    print("=" * 70)
     print(f"Status: [{result.diagnostic_label}]")
     print("=" * 70)
 

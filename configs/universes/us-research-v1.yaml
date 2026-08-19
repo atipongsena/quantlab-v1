@@ -1,0 +1,143 @@
+universe_id: US-RESEARCH-v1
+version: v1
+description: >-
+  Sector-diverse US listed universe used for engine validation. Names are chosen for
+  long continuous history, sector spread, and for the corporate-action and regime edge
+  cases the engine needs to be exercised against - not because they are expected to be
+  profitable. ETFs are listed separately and are never mixed into the equity
+  cross-section (spec 2.7); they exist as benchmarks and allocation sleeves.
+
+# Known and deliberate limitation: every name below is still listed today. Free data
+# providers do not carry delisted price history, so any study built on this universe
+# carries survivorship bias. The synthetic fixture is the one that exercises delisting
+# and merger handling. Do not read a backtest on this universe as survivorship free.
+survivorship_bias: PRESENT
+survivorship_note: >-
+  Currently-listed constituents only. Failed and acquired companies from the study
+  window are absent, which biases realized returns upward.
+
+equities:
+  # Technology - deep history, heavy split activity
+  - {symbol: AAPL, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: MSFT, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: IBM, sector: TECHNOLOGY, exchange: NYSE}
+  - {symbol: INTC, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: ORCL, sector: TECHNOLOGY, exchange: NYSE}
+  - {symbol: CSCO, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: TXN, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: ADBE, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: HPQ, sector: TECHNOLOGY, exchange: NYSE}
+  - {symbol: MU, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: AMAT, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: QCOM, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: NVDA, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: AVGO, sector: TECHNOLOGY, exchange: NASDAQ}
+  - {symbol: CRM, sector: TECHNOLOGY, exchange: NYSE}
+
+  # Communication services
+  - {symbol: T, sector: COMMUNICATION, exchange: NYSE}
+  - {symbol: VZ, sector: COMMUNICATION, exchange: NYSE}
+  - {symbol: DIS, sector: COMMUNICATION, exchange: NYSE}
+  - {symbol: CMCSA, sector: COMMUNICATION, exchange: NASDAQ}
+  - {symbol: GOOGL, sector: COMMUNICATION, exchange: NASDAQ}
+  - {symbol: META, sector: COMMUNICATION, exchange: NASDAQ}
+  - {symbol: NFLX, sector: COMMUNICATION, exchange: NASDAQ}
+
+  # Health care
+  - {symbol: JNJ, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: PFE, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: MRK, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: ABT, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: BMY, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: LLY, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: AMGN, sector: HEALTHCARE, exchange: NASDAQ}
+  - {symbol: MDT, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: TMO, sector: HEALTHCARE, exchange: NYSE}
+  - {symbol: GILD, sector: HEALTHCARE, exchange: NASDAQ}
+  - {symbol: UNH, sector: HEALTHCARE, exchange: NYSE}
+
+  # Financials
+  - {symbol: JPM, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: BAC, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: WFC, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: C, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: AXP, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: USB, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: PNC, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: TRV, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: SCHW, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: GS, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: MS, sector: FINANCIALS, exchange: NYSE}
+  - {symbol: V, sector: FINANCIALS, exchange: NYSE}
+
+  # Energy - the sector that breaks momentum studies in 2015 and 2022
+  - {symbol: XOM, sector: ENERGY, exchange: NYSE}
+  - {symbol: CVX, sector: ENERGY, exchange: NYSE}
+  - {symbol: COP, sector: ENERGY, exchange: NYSE}
+  - {symbol: SLB, sector: ENERGY, exchange: NYSE}
+  - {symbol: EOG, sector: ENERGY, exchange: NYSE}
+  - {symbol: OXY, sector: ENERGY, exchange: NYSE}
+  - {symbol: HAL, sector: ENERGY, exchange: NYSE}
+
+  # Consumer staples
+  - {symbol: PG, sector: STAPLES, exchange: NYSE}
+  - {symbol: KO, sector: STAPLES, exchange: NYSE}
+  - {symbol: PEP, sector: STAPLES, exchange: NASDAQ}
+  - {symbol: WMT, sector: STAPLES, exchange: NYSE}
+  - {symbol: MO, sector: STAPLES, exchange: NYSE}
+  - {symbol: CL, sector: STAPLES, exchange: NYSE}
+  - {symbol: KMB, sector: STAPLES, exchange: NYSE}
+  - {symbol: GIS, sector: STAPLES, exchange: NYSE}
+  - {symbol: SYY, sector: STAPLES, exchange: NYSE}
+  - {symbol: COST, sector: STAPLES, exchange: NASDAQ}
+
+  # Industrials
+  - {symbol: GE, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: CAT, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: MMM, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: BA, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: UNP, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: LMT, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: DE, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: EMR, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: ITW, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: NSC, sector: INDUSTRIALS, exchange: NYSE}
+  - {symbol: HON, sector: INDUSTRIALS, exchange: NASDAQ}
+
+  # Consumer discretionary
+  - {symbol: MCD, sector: DISCRETIONARY, exchange: NYSE}
+  - {symbol: HD, sector: DISCRETIONARY, exchange: NYSE}
+  - {symbol: LOW, sector: DISCRETIONARY, exchange: NYSE}
+  - {symbol: NKE, sector: DISCRETIONARY, exchange: NYSE}
+  - {symbol: SBUX, sector: DISCRETIONARY, exchange: NASDAQ}
+  - {symbol: TGT, sector: DISCRETIONARY, exchange: NYSE}
+  - {symbol: F, sector: DISCRETIONARY, exchange: NYSE}
+  - {symbol: AMZN, sector: DISCRETIONARY, exchange: NASDAQ}
+  - {symbol: TSLA, sector: DISCRETIONARY, exchange: NASDAQ}
+
+  # Utilities - low beta ballast the risk factors need
+  - {symbol: SO, sector: UTILITIES, exchange: NYSE}
+  - {symbol: DUK, sector: UTILITIES, exchange: NYSE}
+  - {symbol: D, sector: UTILITIES, exchange: NYSE}
+  - {symbol: NEE, sector: UTILITIES, exchange: NYSE}
+  - {symbol: AEP, sector: UTILITIES, exchange: NASDAQ}
+
+  # Materials
+  - {symbol: NEM, sector: MATERIALS, exchange: NYSE}
+  - {symbol: FCX, sector: MATERIALS, exchange: NYSE}
+  - {symbol: APD, sector: MATERIALS, exchange: NYSE}
+  - {symbol: SHW, sector: MATERIALS, exchange: NYSE}
+  - {symbol: ECL, sector: MATERIALS, exchange: NYSE}
+
+  # Real estate
+  - {symbol: SPG, sector: REAL_ESTATE, exchange: NYSE}
+  - {symbol: PSA, sector: REAL_ESTATE, exchange: NYSE}
+  - {symbol: O, sector: REAL_ESTATE, exchange: NYSE}
+
+etfs:
+  - {symbol: SPY, sector: BENCHMARK, exchange: NYSE, role: primary_benchmark}
+  - {symbol: QQQ, sector: BENCHMARK, exchange: NASDAQ, role: growth_benchmark}
+  - {symbol: IWM, sector: BENCHMARK, exchange: NYSE, role: small_cap_benchmark}
+  - {symbol: DIA, sector: BENCHMARK, exchange: NYSE, role: mega_cap_benchmark}
+  - {symbol: TLT, sector: BENCHMARK, exchange: NASDAQ, role: duration_sleeve}
+  - {symbol: GLD, sector: BENCHMARK, exchange: NYSE, role: commodity_sleeve}

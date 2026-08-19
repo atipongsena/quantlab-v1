@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1144" height="1084" viewBox="0 0 1144 1084" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
+<rect width="1144" height="1084" rx="8" fill="#101418"/>
+<rect width="1144" height="40" rx="8" fill="#1b2027"/>
+<rect y="32" width="1144" height="8" fill="#1b2027"/>
+<circle cx="20" cy="20" r="6" fill="#ff5f57"/>
+<circle cx="40" cy="20" r="6" fill="#febc2e"/>
+<circle cx="60" cy="20" r="6" fill="#28c840"/>
+<text x="86" y="25" fill="#6e7781">quantlab</text>
+<text x="18" y="61" fill="#e3b341" xml:space="preserve">$ quantlab factor research momentum_12_1 --dataset DATASET-US-30Y-v001</text>
+<text x="18" y="80" fill="#6e7781" xml:space="preserve">======================================================================</text>
+<text x="18" y="99" fill="#c9d1d9" xml:space="preserve">Factor Research Report: momentum_12_1</text>
+<text x="18" y="118" fill="#c9d1d9" xml:space="preserve">Period: 1995-01-31 to 2024-12-31 (360 sessions)</text>
+<text x="18" y="137" fill="#6e7781" xml:space="preserve">======================================================================</text>
+<text x="18" y="156" fill="#c9d1d9" xml:space="preserve">Rebalances         : 360 (monthly, month-end close)</text>
+<text x="18" y="175" fill="#c9d1d9" xml:space="preserve">Mean cross-section : 91.6 names with a tradable label</text>
+<text x="18" y="194" fill="#c9d1d9" xml:space="preserve">Factor coverage    : 93.2% of universe scored</text>
+<text x="18" y="213" fill="#6e7781" xml:space="preserve">----------------------------------------------------------------------</text>
+<text x="18" y="232" fill="#c9d1d9" xml:space="preserve">Pearson IC mean    : +0.0310  (sd 0.2748)</text>
+<text x="18" y="251" fill="#c9d1d9" xml:space="preserve">Rank IC mean       : +0.0123  (sd 0.2488)</text>
+<text x="18" y="270" fill="#c9d1d9" xml:space="preserve">Rank IC IR         : +0.0495 per rebalance</text>
+<text x="18" y="289" fill="#c9d1d9" xml:space="preserve">Rank IC t-stat     : +0.92 OLS</text>
+<text x="18" y="308" fill="#c9d1d9" xml:space="preserve">  Newey-West       : +0.98 (overlap-adjusted)</text>
+<text x="18" y="327" fill="#c9d1d9" xml:space="preserve">Positive IC months : 55.8%</text>
+<text x="18" y="346" fill="#6e7781" xml:space="preserve">----------------------------------------------------------------------</text>
+<text x="18" y="365" fill="#c9d1d9" xml:space="preserve">Rank IC by forward horizon:</text>
+<text x="18" y="384" fill="#c9d1d9" xml:space="preserve">  -   1M: +0.0123</text>
+<text x="18" y="403" fill="#c9d1d9" xml:space="preserve">  -   3M: +0.0083</text>
+<text x="18" y="422" fill="#c9d1d9" xml:space="preserve">  -   6M: +0.0135</text>
+<text x="18" y="441" fill="#c9d1d9" xml:space="preserve">  -  12M: -0.0037</text>
+<text x="18" y="460" fill="#6e7781" xml:space="preserve">----------------------------------------------------------------------</text>
+<text x="18" y="479" fill="#c9d1d9" xml:space="preserve">Quantile portfolios (annualized, compounded, gross of costs):</text>
+<text x="18" y="498" fill="#c9d1d9" xml:space="preserve">  -   Q1: +15.63%</text>
+<text x="18" y="517" fill="#c9d1d9" xml:space="preserve">  -   Q2: +15.02%</text>
+<text x="18" y="536" fill="#c9d1d9" xml:space="preserve">  -   Q3: +14.16%</text>
+<text x="18" y="555" fill="#c9d1d9" xml:space="preserve">  -   Q4: +14.42%</text>
+<text x="18" y="574" fill="#c9d1d9" xml:space="preserve">  -   Q5: +19.77%</text>
+<text x="18" y="593" fill="#c9d1d9" xml:space="preserve">Monotonicity       : +0.10 (rank corr, +1 = clean sort)</text>
+<text x="18" y="612" fill="#c9d1d9" xml:space="preserve">Q5 - Q1 spread     : +4.14% annualized</text>
+<text x="18" y="631" fill="#c9d1d9" xml:space="preserve">Long/short leg     : -0.46% return | 23.30% vol | Sharpe -0.02</text>
+<text x="18" y="650" fill="#c9d1d9" xml:space="preserve">Rank turnover      : 11.8% per rebalance</text>
+<text x="18" y="669" fill="#6e7781" xml:space="preserve">----------------------------------------------------------------------</text>
+<text x="18" y="688" fill="#c9d1d9" xml:space="preserve">Rank IC stability by year:</text>
+<text x="18" y="707" fill="#c9d1d9" xml:space="preserve">  - 1996: -0.0090</text>
+<text x="18" y="726" fill="#c9d1d9" xml:space="preserve">  - 1997: +0.0588</text>
+<text x="18" y="745" fill="#c9d1d9" xml:space="preserve">  - 1998: +0.1720</text>
+<text x="18" y="764" fill="#c9d1d9" xml:space="preserve">  - 1999: +0.0528</text>
+<text x="18" y="783" fill="#c9d1d9" xml:space="preserve">  - 2000: -0.1553</text>
+<text x="18" y="802" fill="#c9d1d9" xml:space="preserve">  - 2001: +0.0172</text>
+<text x="18" y="821" fill="#c9d1d9" xml:space="preserve">  - 2002: +0.1034</text>
+<text x="18" y="840" fill="#c9d1d9" xml:space="preserve">  - 2003: -0.0658</text>
+<text x="18" y="859" fill="#c9d1d9" xml:space="preserve">  - 2004: +0.0255</text>
+<text x="18" y="878" fill="#c9d1d9" xml:space="preserve">  - 2005: +0.1109</text>
+<text x="18" y="897" fill="#c9d1d9" xml:space="preserve">  - 2006: -0.0754</text>
+<text x="18" y="916" fill="#c9d1d9" xml:space="preserve">  - 2007: +0.0157</text>
+<text x="18" y="935" fill="#c9d1d9" xml:space="preserve">  - 2008: +0.0316</text>
+<text x="18" y="954" fill="#c9d1d9" xml:space="preserve">  - 2009: -0.1552</text>
+<text x="18" y="973" fill="#c9d1d9" xml:space="preserve">  - 2010: +0.0337</text>
+<text x="18" y="992" fill="#c9d1d9" xml:space="preserve">  - 2011: -0.0426</text>
+<text x="18" y="1011" fill="#c9d1d9" xml:space="preserve">... 16 more lines</text>
+<text x="18" y="1049" fill="#6e7781" font-size="11">captured 2026-08-19 19:28 SE Asia Standard Time  |  exit 0  |  regenerate: python scripts/capture_terminal.py --name factor-research</text>
+</svg>

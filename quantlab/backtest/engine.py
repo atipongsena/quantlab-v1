@@ -40,16 +40,22 @@ class BacktestEngine:
         alpha_provider: Callable[[date], FactorSnapshot] | None = None,
         sectors_provider: Callable[[date], Mapping[InstrumentId, str]] | None = None,
         universe_provider: Callable[[date], Sequence[InstrumentId]] | None = None,
+        sessions_provider: Callable[[date, date], Sequence[date]] | None = None,
     ) -> None:
         self._bars_provider = bars_provider
         self._corporate_actions_provider = corporate_actions_provider or (lambda _: ())
         self._alpha_provider = alpha_provider
         self._sectors_provider = sectors_provider or (lambda _: {})
         self._universe_provider = universe_provider
+        # A rule-based calendar approximates NYSE closures; the sessions actually present
+        # in a dataset are the ground truth, including the ad-hoc closures (9/11, Sandy,
+        # national days of mourning) no weekday-and-holiday rule reproduces. Callers with
+        # a real dataset pass its calendar in.
+        self._sessions_provider = sessions_provider or TradingCalendar.get_sessions
 
     def run(self, spec: BacktestSpec) -> BacktestResult:
         """Run simulation over specified date range according to spec."""
-        all_sessions = TradingCalendar.get_sessions(spec.start_session, spec.end_session)
+        all_sessions = list(self._sessions_provider(spec.start_session, spec.end_session))
         if not all_sessions:
             raise ValueError(
                 f"No trading sessions in range {spec.start_session} to {spec.end_session}"
@@ -93,6 +99,9 @@ class BacktestEngine:
         snapshots: dict[date, PortfolioSnapshot] = {}
 
         pending_orders: list[Order] = []
+        # Last observed close per instrument, so a session with no bar for a held name
+        # carries the position forward instead of repricing it to cost basis.
+        last_known_prices: dict[InstrumentId, Decimal] = {}
         total_turnover = Decimal("0.0")
         total_fees = Decimal("0.0")
         total_slippage = Decimal("0.0")
@@ -142,7 +151,9 @@ class BacktestEngine:
                 snapshot = accounting.mark_to_market(
                     as_of=event.timestamp,
                     close_prices=close_prices,
+                    last_known_prices=last_known_prices,
                 )
+                last_known_prices.update(close_prices)
                 snapshots[sess] = snapshot
 
                 tot_equity = snapshot.cash + sum(p.market_value for p in snapshot.positions)

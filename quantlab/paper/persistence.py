@@ -7,9 +7,10 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from uuid import UUID
 
 from quantlab.domain.identity import InstrumentId
-from quantlab.paper.contracts import BrokerAccount, PaperFill
+from quantlab.paper.contracts import BrokerAccount, PaperFill, PaperOrderSide
 
 
 class PaperStateStore:
@@ -134,6 +135,39 @@ class PaperStateStore:
                 cash_balance=Decimal(row["cash_balance"]),
                 buying_power=Decimal(row["buying_power"]),
                 positions=positions,
+            )
+        finally:
+            conn.close()
+
+    def load_fills(self) -> tuple[PaperFill, ...]:
+        """Read the fill ledger back from storage, oldest first.
+
+        Recovery has to start from what is on disk. Replaying fill objects that are
+        already in memory tests the arithmetic but not the thing that matters after a
+        crash: that the ledger was durable and can be read back.
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT fill_id, order_id, instrument_id, side, quantity,
+                       price, commission, filled_at
+                FROM paper_fills
+                ORDER BY filled_at ASC, fill_id ASC
+                """
+            )
+            return tuple(
+                PaperFill(
+                    fill_id=str(row["fill_id"]),
+                    order_id=str(row["order_id"]),
+                    instrument_id=InstrumentId.from_uuid(UUID(str(row["instrument_id"]))),
+                    side=PaperOrderSide(str(row["side"])),
+                    quantity=int(row["quantity"]),
+                    price=Decimal(str(row["price"])),
+                    commission=Decimal(str(row["commission"])),
+                    filled_at=datetime.fromisoformat(str(row["filled_at"])),
+                )
+                for row in cursor.fetchall()
             )
         finally:
             conn.close()

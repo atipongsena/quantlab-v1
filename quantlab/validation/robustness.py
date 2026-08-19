@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 
+from quantlab.domain.identity import InstrumentId
 from quantlab.validation.ablation import AblationAnalyzer, AblationRecord
 from quantlab.validation.candidate import FrozenCandidate
 from quantlab.validation.concentration import ConcentrationAnalyzer, ConcentrationRiskReport
@@ -18,81 +21,66 @@ class RobustnessArtifact:
     cost_stress: ExecutionStressResult
     concentration: ConcentrationRiskReport
     ablations: tuple[AblationRecord, ...]
+    subperiod_cagr: Mapping[str, float]
 
     def as_dict(self) -> dict[str, object]:
         return {
             "candidate_id": self.candidate_id,
             "top_k_topology": self.top_k_surface.topology.value,
+            "top_k_cells": [
+                {
+                    "top_k": cell.parameters.get("top_k"),
+                    "sharpe_ratio": round(cell.sharpe_ratio, 4),
+                    "cagr": round(cell.cagr, 6),
+                    "max_drawdown": round(cell.max_drawdown, 6),
+                }
+                for cell in self.top_k_surface.cells
+            ],
             "break_even_cost_bps": self.cost_stress.break_even_cost_bps,
             "is_cost_fragile": self.cost_stress.is_cost_fragile,
             "herfindahl_index": self.concentration.herfindahl_index,
             "is_excessively_concentrated": self.concentration.is_excessively_concentrated,
+            "ablations": [record.as_dict() for record in self.ablations],
             "ablations_count": len(self.ablations),
+            "subperiod_cagr": {k: round(v, 6) for k, v in self.subperiod_cagr.items()},
         }
 
 
 class RobustnessRunner:
-    """Coordinates full robustness matrix generation for a frozen candidate."""
+    """Assembles the robustness matrix from measurements the caller supplies.
+
+    Every input here has to come from a real re-run of the strategy. A hard-coded
+    sensitivity surface will always report a reassuring plateau, which is worse than
+    having no surface at all: it looks like evidence.
+    """
 
     @classmethod
     def run(
         cls,
         candidate: FrozenCandidate,
-        baseline_sharpe: float = 1.25,
-        baseline_cagr: float = 0.18,
-        annual_turnover: float = 3.0,
+        top_k_cells: Sequence[SensitivityCell],
+        zero_cost_cagr: float,
+        annual_turnover: float,
+        terminal_weights: Mapping[InstrumentId, Decimal],
+        sector_weights: Mapping[str, Decimal],
+        ablation_results: Mapping[str, tuple[float, float]],
+        baseline_sharpe: float,
+        baseline_cagr: float,
+        subperiod_cagr: Mapping[str, float] | None = None,
     ) -> RobustnessArtifact:
-        # 1. Top-K sensitivity surface (20, 30, 50)
-        cells = [
-            SensitivityCell(
-                {"top_k": 20},
-                sharpe_ratio=1.15,
-                cagr=0.16,
-                max_drawdown=0.12,
-            ),
-            SensitivityCell(
-                {"top_k": 30},
-                sharpe_ratio=baseline_sharpe,
-                cagr=baseline_cagr,
-                max_drawdown=0.10,
-            ),
-            SensitivityCell(
-                {"top_k": 50},
-                sharpe_ratio=1.10,
-                cagr=0.15,
-                max_drawdown=0.09,
-            ),
-        ]
-        top_k_surface = SensitivitySurface.analyze("top_k", cells)
+        top_k_surface = SensitivitySurface.analyze("top_k", list(top_k_cells))
 
-        # 2. Execution stress testing
         cost_stress = ExecutionStressTester.evaluate(
-            zero_cost_cagr=baseline_cagr,
+            zero_cost_cagr=zero_cost_cagr,
             turnover_annual=annual_turnover,
         )
 
-        # 3. Concentration analysis (Top 30 equal weight baseline)
-        dummy_sectors = {"Tech": 0.30, "Healthcare": 0.25, "Finance": 0.20, "Consumer": 0.25}
-        # convert to Decimal
-        import uuid
-        from decimal import Decimal
+        concentration = ConcentrationAnalyzer.evaluate(dict(terminal_weights), dict(sector_weights))
 
-        from quantlab.domain.identity import InstrumentId
-
-        w_dec = {InstrumentId(uuid.UUID(int=i + 1)): Decimal("0.0333") for i in range(30)}
-        sec_dec = {k: Decimal(str(v)) for k, v in dummy_sectors.items()}
-        concentration = ConcentrationAnalyzer.evaluate(w_dec, sec_dec)
-
-        # 4. Factor ablations
-        ablation_inputs = {
-            "momentum_12_1": (1.05, 0.14),
-            "value_composite": (1.10, 0.15),
-            "quality_roe": (1.18, 0.16),
-        }
         ablations = AblationAnalyzer.evaluate(
             baseline_sharpe=baseline_sharpe,
             baseline_cagr=baseline_cagr,
-            ablation_results=ablation_inputs,
+            ablation_results=dict(ablation_results),
         )
 
         return RobustnessArtifact(
@@ -101,4 +89,5 @@ class RobustnessRunner:
             cost_stress=cost_stress,
             concentration=concentration,
             ablations=ablations,
+            subperiod_cagr=dict(subperiod_cagr or {}),
         )

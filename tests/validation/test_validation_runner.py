@@ -3,6 +3,7 @@
 from quantlab.validation.candidate import CandidateFreezer
 from quantlab.validation.runner import ValidationRunner
 from quantlab.validation.verdicts import ValidationVerdict
+from tests.validation.factories import build_robustness
 
 
 def test_validation_runner_full_pipeline() -> None:
@@ -12,6 +13,7 @@ def test_validation_runner_full_pipeline() -> None:
     result = ValidationRunner.run(
         candidate=candidate,
         returns_series=returns,
+        robustness=build_robustness(candidate),
     )
 
     assert result.candidate.candidate_id == candidate.candidate_id

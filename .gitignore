@@ -15,6 +15,25 @@ dist/
 *.egg-info/
 *.db
 
+# Web app
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/next-env.d.ts
+apps/web/*.tsbuildinfo
+
 # Runtime analytical store (except tracked fixtures)
 data/*
 !data/fixtures/
+
+# Third-party market data is not redistributed. `scripts/download_real_market_data.py`
+# rebuilds it from the provider, and data/fixtures/us_research/source/download_manifest.json
+# records the SHA-256 of every file so a rebuild can be checked against the run the
+# README quotes. The small synthetic fixture stays committed so the test suite and the
+# golden regression run on a clean clone with no network.
+data/fixtures/us_research/
+
+# The evidence artifacts under artifacts/latest/ stay committed on purpose: they are the
+# record behind the numbers the README quotes, so a reader can check them without
+# downloading thirty years of prices first.
+artifacts/quantlab.db

@@ -11,6 +11,10 @@ MIGRATIONS: list[tuple[str, Any]] = [
     ("0002_instruments", importlib.import_module("migrations.versions.0002_instruments")),
     ("0003_fundamentals", importlib.import_module("migrations.versions.0003_fundamentals")),
     ("0004_macro", importlib.import_module("migrations.versions.0004_macro")),
+    (
+        "0005_ingest_idempotency",
+        importlib.import_module("migrations.versions.0005_ingest_idempotency"),
+    ),
 ]
 
 

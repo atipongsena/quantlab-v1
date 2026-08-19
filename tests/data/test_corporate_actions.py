@@ -24,8 +24,8 @@ from quantlab.domain.identity import (
     SymbolHistory,
 )
 from quantlab.domain.market import BarPriceSemantic, MarketBar
+from quantlab.infrastructure.analytical_store import LocalAnalyticalStore
 from quantlab.infrastructure.db import DatabaseConfig, DatabaseEngine
-from quantlab.infrastructure.duckdb import LocalAnalyticalStore
 from quantlab.infrastructure.instrument_repository import SqlInstrumentRepository
 
 

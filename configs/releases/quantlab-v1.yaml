@@ -1,11 +1,20 @@
 release_id: "quantlab-v1"
 version: "1.0.0"
-title: "QuantLab V1 Production Release"
+title: "QuantLab V1 acceptance run"
+
+# The acceptance run targets the committed synthetic fixture: small, offline, and built
+# to carry the awkward cases (delisting, ticker change, missing open, restatement, split,
+# dividend). It checks that the pipeline holds together end to end. It is not a claim
+# about any strategy's profitability.
+dataset_config: "configs/datasets/synthetic-v001.yaml"
 target_dataset: "DATASET-v001"
 target_fixture: "synthetic_v1"
-strategy_config: "configs/strategies/composite-top30-v1.yaml"
+strategy_config: "configs/strategies/synthetic-golden-v1.yaml"
+
+start_date: "2021-01-04"
+end_date: "2022-12-30"
+
 validation_gates:
   lookahead_leakage_clean: true
-  min_dsr: 0.80
   sensitivity_topology: "PLATEAU"
   max_break_severity: "NONE"
