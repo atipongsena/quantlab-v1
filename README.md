@@ -12,6 +12,9 @@ algebra, the tree learner, and the accounting are all in this repository.
 > below runs on a universe with known survivorship bias, and the falsification layer
 > stops it at `RESEARCH_ONLY`.
 
+A full walkthrough in Thai is at [docs/guide-th.md](docs/guide-th.md): what the project
+does, the techniques it uses, how it is tested, and where to take it next.
+
 ![Dashboard, strategy performance](docs/images/dashboard-performance.png)
 
 ```
@@ -379,7 +382,7 @@ apps/web      Next.js dashboard
 apps/mcp      Model Context Protocol server
 configs/      universes, datasets, factors, strategies, validation, releases
 scripts/      download, verification, acceptance, drills
-docs/         calculator specifications, architecture notes, design spec
+docs/         calculator specifications, architecture notes, design spec, Thai guide
 tests/        unit, property, architecture, red team, end to end
 ```
 
